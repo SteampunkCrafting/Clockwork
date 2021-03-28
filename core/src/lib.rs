@@ -9,7 +9,7 @@ impl<T> ClockworkState for T where T: Send + Sized {}
 pub trait ClockworkEvent: Send + Clone + Eq + hash::Hash + fmt::Display {}
 impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Display {}
 
-pub trait MainLoop<S, E>: FnOnce(&mut S, Mechanisms<S, E>)
+pub trait MainLoop<S, E>: FnOnce(Box<S>, Mechanisms<S, E>)
 where
     S: ClockworkState,
     E: ClockworkEvent,
@@ -18,7 +18,7 @@ where
 
 impl<T, S, E> MainLoop<S, E> for T
 where
-    T: FnOnce(&mut S, Mechanisms<S, E>),
+    T: FnOnce(Box<S>, Mechanisms<S, E>),
     S: ClockworkState,
     E: ClockworkEvent,
 {
@@ -48,7 +48,7 @@ where
             mechanisms,
         } = self;
         info!("Starting Clockwork Engine");
-        main_loop(state.borrow_mut(), mechanisms);
+        main_loop(state, mechanisms);
         info!("Terminating Clockwork Engine");
     }
 
