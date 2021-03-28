@@ -1,6 +1,5 @@
 use log::*;
 pub use mechanism::*;
-use std::borrow::BorrowMut;
 use std::*;
 
 pub trait ClockworkState: Send + Sized {}
@@ -44,7 +43,7 @@ where
     pub fn set_the_clock(self) {
         let Self {
             main_loop,
-            mut state,
+            state,
             mechanisms,
         } = self;
         info!("Starting Clockwork Engine");
@@ -89,7 +88,7 @@ where
     }
 
     pub fn with_mechanism(
-        mut self,
+        self,
         mechanism: impl Mechanism<S, E> + 'static,
         events: impl IntoIterator<Item = E> + fmt::Display,
     ) -> Self {
