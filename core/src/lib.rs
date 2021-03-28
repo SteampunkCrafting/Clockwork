@@ -58,7 +58,7 @@ where
     }
 }
 
-struct ClockworkBuilder<S, E>(
+pub struct ClockworkBuilder<S, E>(
     Option<Box<dyn MainLoop<S, E>>>,
     Option<Box<S>>,
     MechanismsBuilder<S, E>,
