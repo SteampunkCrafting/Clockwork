@@ -41,7 +41,7 @@ where
     S: ClockworkState,
     E: ClockworkEvent,
 {
-    fn set_the_clock(self) {
+    pub fn set_the_clock(self) {
         let Self {
             main_loop,
             mut state,
@@ -52,7 +52,7 @@ where
         info!("Terminating Clockwork Engine");
     }
 
-    fn builder() -> ClockworkBuilder<S, E> {
+    pub fn builder() -> ClockworkBuilder<S, E> {
         info!("Constructing Clockwork builder");
         Default::default()
     }
