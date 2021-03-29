@@ -5,8 +5,8 @@ use std::*;
 pub trait ClockworkState: Send + Sized {}
 impl<T> ClockworkState for T where T: Send + Sized {}
 
-pub trait ClockworkEvent: Send + Clone + Eq + hash::Hash + fmt::Display {}
-impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Display {}
+pub trait ClockworkEvent: Send + Clone + Eq + hash::Hash + fmt::Debug {}
+impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debug {}
 
 pub trait MainLoop<S, E>: FnOnce(Box<S>, Mechanisms<S, E>)
 where
@@ -90,11 +90,11 @@ where
     pub fn with_mechanism(
         self,
         mechanism: impl Mechanism<S, E> + 'static,
-        events: impl IntoIterator<Item = E> + fmt::Display,
+        events: impl IntoIterator<Item = E> + fmt::Debug,
     ) -> Self {
         info!("Adding mechanism: {}", mechanism.name());
         info!(
-            "Subscribing mechanism \"{}\" to events: {}",
+            "Subscribing mechanism \"{}\" to events: {:?}",
             mechanism.name(),
             events
         );
@@ -103,6 +103,25 @@ where
             main_loop,
             state,
             mechanisms.with_mechanism(mechanism, events),
+        )
+    }
+
+    pub fn with_read_mechanism(
+        self,
+        read_mechanism: impl ReadMechanism<S, E> + 'static,
+        events: impl IntoIterator<Item = E> + fmt::Debug,
+    ) -> Self {
+        info!("Adding read-only mechanism: {}", read_mechanism.name());
+        info!(
+            "Subscribing mechanism \"{}\" to events: {:?}",
+            read_mechanism.name(),
+            events
+        );
+        let Self(main_loop, state, mechanisms) = self;
+        Self(
+            main_loop,
+            state,
+            mechanisms.with_read_mechanism(read_mechanism, events),
         )
     }
 

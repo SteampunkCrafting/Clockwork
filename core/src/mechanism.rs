@@ -102,7 +102,7 @@ where
 
     pub fn with_read_mechanism(
         mut self,
-        mechanism: impl Into<Box<dyn ReadMechanism<S, E>>>,
+        read_mechanism: impl ReadMechanism<S, E> + 'static,
         events: impl IntoIterator<Item = E>,
     ) -> Self {
         let Self {
@@ -112,7 +112,7 @@ where
         } = &mut self;
         let id = all_read_mechanisms.len();
 
-        all_read_mechanisms.push(mechanism.into());
+        all_read_mechanisms.push(Box::new(read_mechanism));
         events
             .into_iter()
             .unique()
