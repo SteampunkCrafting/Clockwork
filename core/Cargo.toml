@@ -5,10 +5,5 @@ authors = ["Yaroslav V. Petrov <yaroslav.v.petrov@yandex.ru>"]
 edition = "2018"
 
 [dependencies]
-rayon = "1.5.0"
 log = "0.4.14"
-typed-builder = "0.9.0"
-thiserror = "1.0.24"
-static_assertions = "1.1.0"
-downcast-rs = "1.2.0"
 itertools = "0.10.0"
