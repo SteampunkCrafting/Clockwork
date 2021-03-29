@@ -58,12 +58,12 @@ where
         });
     }
 
-    pub fn builder() -> MechanismsBuilder<S, E> {
+    pub(crate) fn builder() -> MechanismsBuilder<S, E> {
         Default::default()
     }
 }
 
-pub struct MechanismsBuilder<S, E>
+pub(crate) struct MechanismsBuilder<S, E>
 where
     S: ClockworkState,
     E: ClockworkEvent,
