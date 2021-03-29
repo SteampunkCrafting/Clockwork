@@ -7,7 +7,7 @@ where
     E: ClockworkEvent,
 {
     fn name(&self) -> &'static str;
-    fn tick(&mut self, state: &mut S, event: E);
+    fn clink(&mut self, state: &mut S, event: E);
 }
 
 pub trait ReadMechanism<S, E>
@@ -16,7 +16,7 @@ where
     E: ClockworkEvent,
 {
     fn name(&self) -> &'static str;
-    fn tick(&mut self, state: &S, event: E);
+    fn clink(&mut self, state: &S, event: E);
 }
 
 pub struct Mechanisms<S, E>
@@ -35,7 +35,7 @@ where
     S: ClockworkState,
     E: ClockworkEvent,
 {
-    pub fn tick_event(&mut self, state: &mut S, event: E) {
+    pub fn clink_event(&mut self, state: &mut S, event: E) {
         let Self {
             all_mechanisms,
             events_to_mechanisms,
@@ -46,14 +46,14 @@ where
             ids.iter().cloned().for_each(|id| unsafe {
                 all_mechanisms
                     .get_unchecked_mut(id)
-                    .tick(state, event.clone())
+                    .clink(state, event.clone())
             })
         });
         events_to_read_mechanisms.get(&event).map_or((), |ids| {
             ids.iter().cloned().for_each(|id| unsafe {
                 all_read_mechanisms
                     .get_unchecked_mut(id)
-                    .tick(state, event.clone())
+                    .clink(state, event.clone())
             })
         });
     }

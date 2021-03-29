@@ -26,11 +26,11 @@ fn clockwork_execution() {
         use borrow::BorrowMut;
 
         let (state, mechanisms) = (state.borrow_mut(), mechanisms.borrow_mut());
-        mechanisms.tick_event(state, TestEvent::Start);
+        mechanisms.clink_event(state, TestEvent::Start);
         while *state < 10 {
-            mechanisms.tick_event(state, TestEvent::Tick);
+            mechanisms.clink_event(state, TestEvent::Tick);
         }
-        mechanisms.tick_event(state, TestEvent::Termination);
+        mechanisms.clink_event(state, TestEvent::Termination);
     }
 
     struct TestMechanism(i32);
@@ -39,7 +39,7 @@ fn clockwork_execution() {
             "Test Mechanism"
         }
 
-        fn tick(&mut self, state: &mut i32, event: TestEvent) {
+        fn clink(&mut self, state: &mut i32, event: TestEvent) {
             let Self(inc) = self;
             match event {
                 TestEvent::Tick => *state += *inc,
@@ -54,7 +54,7 @@ fn clockwork_execution() {
             "Test Read Mechanism"
         }
 
-        fn tick(&mut self, state: &i32, event: TestEvent) {
+        fn clink(&mut self, state: &i32, event: TestEvent) {
             let Self(prev_state, expect_inc) = self;
             match event {
                 TestEvent::Tick => assert_eq!(*prev_state + *expect_inc, *state),
