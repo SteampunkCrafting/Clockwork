@@ -57,10 +57,6 @@ where
             })
         });
     }
-
-    pub(crate) fn builder() -> MechanismsBuilder<S, E> {
-        Default::default()
-    }
 }
 
 pub(crate) struct MechanismsBuilder<S, E>
