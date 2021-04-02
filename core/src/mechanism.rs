@@ -2,24 +2,38 @@ use crate::clockwork::*;
 use itertools::*;
 use std::*;
 
+/// Mechanism is an event handler to clockwork events.
+///
+/// Is able to read from, and write into the game state.
 pub trait Mechanism<S, E>
 where
     S: ClockworkState,
     E: ClockworkEvent,
 {
+    /// Defines a mechanism name
     fn name(&self) -> &'static str;
+    /// Defines a reaction of the mechanism on the event
     fn clink(&mut self, state: &mut S, event: E);
 }
 
+/// A read-only version of Mechanism.
+///
+/// Is not able to write into the game state.
 pub trait ReadMechanism<S, E>
 where
     S: ClockworkState,
     E: ClockworkEvent,
 {
+    /// Defines a mechanism name
     fn name(&self) -> &'static str;
+    /// Defines a reaction of the mechanism on the event
     fn clink(&mut self, state: &S, event: E);
 }
 
+/// A struct, which is owned by the main loop.
+/// Its purpose is to pass events, produced by the main loop,
+/// to the mechanisms, but only if the mechanisms are subscribed
+/// to this kind of event.
 pub struct Mechanisms<S, E>
 where
     S: ClockworkState,
@@ -30,12 +44,14 @@ where
     all_read_mechanisms: Vec<Box<dyn ReadMechanism<S, E>>>,
     events_to_read_mechanisms: collections::HashMap<E, Vec<usize>>,
 }
-
 impl<S, E> Mechanisms<S, E>
 where
     S: ClockworkState,
     E: ClockworkEvent,
 {
+    /// Gets a mutable reference to the state, and event,
+    /// then calls `clink` on every `Mechanism`, and `ReadMechanism`
+    /// instance, which has been subscribed to the event of this kind.
     pub fn clink_event(&mut self, state: &mut S, event: E) {
         let Self {
             all_mechanisms,
@@ -60,6 +76,7 @@ where
     }
 }
 
+/// A private builder for the Mechanisms struct
 pub(crate) struct MechanismsBuilder<S, E>
 where
     S: ClockworkState,
@@ -133,7 +150,6 @@ where
         })
     }
 }
-
 impl<S, E> Default for MechanismsBuilder<S, E>
 where
     S: ClockworkState,
