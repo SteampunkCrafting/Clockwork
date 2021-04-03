@@ -15,19 +15,6 @@ where
     /// Defines a reaction of the mechanism on the event
     fn clink(&mut self, state: &mut S, event: E);
 }
-impl<T, S, E> Mechanism<S, E> for T
-where
-    T: ReadMechanism<S, E>,
-    S: ClockworkState,
-    E: ClockworkEvent,
-{
-    fn name(&self) -> &'static str {
-        ReadMechanism::name(self)
-    }
-    fn clink(&mut self, state: &mut S, event: E) {
-        ReadMechanism::clink(self, state, event);
-    }
-}
 
 /// A read-only version of Mechanism.
 ///
