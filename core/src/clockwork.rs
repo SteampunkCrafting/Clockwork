@@ -7,8 +7,8 @@ pub trait ClockworkState: Send + Sized {}
 impl<T> ClockworkState for T where T: Send + Sized {}
 
 /// A set of constraints, which every valid Clockwork event type should satisfy.
-pub trait ClockworkEvent: Send + Clone + Eq + hash::Hash + fmt::Debug {}
-impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debug {}
+pub trait ClockworkEvent: Send + Clone + Eq + hash::Hash + fmt::Debug + 'static {}
+impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debug + 'static {}
 
 /// A substate of a clockwork state.
 ///
