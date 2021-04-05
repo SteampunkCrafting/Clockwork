@@ -3,8 +3,8 @@ use log::*;
 use std::*;
 
 /// A set of constraints, which every valid Clockwork state should satisfy.
-pub trait ClockworkState: Send + Sized + 'static {}
-impl<T> ClockworkState for T where T: Send + Sized + 'static {}
+pub trait ClockworkState: Sized + 'static {}
+impl<T> ClockworkState for T where T: Sized + 'static {}
 
 /// A set of constraints, which every valid Clockwork event type should satisfy.
 pub trait ClockworkEvent: Send + Clone + Eq + hash::Hash + fmt::Debug + 'static {}
