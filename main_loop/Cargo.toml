@@ -1,0 +1,17 @@
+[package]
+name = "spc_clockwork_main_loop"
+version = "0.1.0"
+authors = ["Yaroslav V. Petrov <yaroslav.v.petrov@yandex.ru>"]
+edition = "2018"
+
+[dependencies.core]
+package = "spc_clockwork_core"
+path = "../core"
+
+[dependencies]
+winit = "0.24.0"
+vulkano = "0.22.0"
+vulkano-win = "0.22.0"
+log = "0.4.14"
+getset = "0.1.1"
+derive_builder = "0.10.0"
