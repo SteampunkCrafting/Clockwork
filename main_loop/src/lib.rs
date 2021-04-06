@@ -6,5 +6,6 @@ pub mod prelude {
     pub use crate::event::*;
     pub use crate::main_loop::*;
     pub use crate::state::*;
+    pub use vulkano::swapchain::Surface;
     pub use winit::window::Window;
 }
