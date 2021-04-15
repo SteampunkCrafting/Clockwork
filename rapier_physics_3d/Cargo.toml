@@ -1,0 +1,18 @@
+[package]
+name = "spc_clockwork_rapier_physics_3d"
+version = "0.1.0"
+authors = ["Yaroslav V. Petrov <yaroslav.v.petrov@yandex.ru>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.core]
+package = "spc_clockwork_core"
+path = "../core"
+
+[dependencies.main_loop]
+package = "spc_clockwork_main_loop"
+path = "../main_loop"
+
+[dependencies]
+rapier3d = { version = "*", features = [ "simd-stable" ] }
