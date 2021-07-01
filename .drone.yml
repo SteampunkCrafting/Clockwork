@@ -1,0 +1,29 @@
+---
+kind: pipeline
+type: kubernetes
+name: Linux amd64 test
+
+steps:
+  - name: Test in debug mode
+    image: rust
+    commands:
+      - cargo test
+  - name: Test in release mode
+    image: rust
+    commands:
+      - cargo test --release
+
+---
+kind: pipeline
+type: kubernetes
+name: Linux arm64 test
+
+steps:
+  - name: Test in debug mode
+    image: rust
+    commands:
+      - cargo test
+  - name: Test in release mode
+    image: rust
+    commands:
+      - cargo test --release
