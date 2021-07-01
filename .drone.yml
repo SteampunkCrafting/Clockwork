@@ -2,6 +2,9 @@
 kind: pipeline
 type: kubernetes
 name: Linux amd64 test
+platform:
+  os: linux
+  arсh: amd64
 
 steps:
   - name: Test in debug mode
@@ -24,6 +27,9 @@ steps:
 kind: pipeline
 type: kubernetes
 name: Linux arm64 test
+platform:
+  os: linux
+  arсh: arm64
 
 steps:
   - name: Test in debug mode
