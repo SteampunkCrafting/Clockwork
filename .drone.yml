@@ -22,29 +22,3 @@ steps:
         from_secret: discord_webhook_id
       webhook_token:
         from_secret: discord_webhook_token
-
----
-kind: pipeline
-type: kubernetes
-name: Linux arm64 test
-platform:
-  os: linux
-  arсh: arm64
-
-steps:
-  - name: Test in debug mode
-    image: rust
-    commands:
-      - cargo test
-  - name: Test in release mode
-    image: rust
-    commands:
-      - cargo test --release
-
-  - name: Discord report
-    image: appleboy/drone-discord
-    settings:
-      webhook_id:
-        from_secret: discord_webhook_id
-      webhook_token:
-        from_secret: discord_webhook_token
