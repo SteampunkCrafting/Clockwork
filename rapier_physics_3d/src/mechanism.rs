@@ -23,6 +23,7 @@ where
                     broad_phase,
                     narrow_phase,
                     ccd_solver,
+                    islands,
                     ..
                 } = state.substate_mut();
                 let gra = Vector3::zeros();
@@ -30,6 +31,7 @@ where
                 pipeline.step(
                     &gra,
                     integration_parameters,
+                    islands,
                     broad_phase,
                     narrow_phase,
                     bodies,
