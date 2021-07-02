@@ -1,8 +1,13 @@
+#[cfg(debug_assertions)]
+use no_deadlocks::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+#[cfg(not(debug_assertions))]
+use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
+
 use std::{
     ops::{Deref, DerefMut},
     sync::{
         atomic::{AtomicUsize, Ordering::Relaxed},
-        Arc, RwLock, RwLockReadGuard, RwLockWriteGuard,
+        Arc,
     },
 };
 
