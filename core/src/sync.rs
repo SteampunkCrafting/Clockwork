@@ -30,6 +30,15 @@ impl<T> From<T> for Lock<T> {
     }
 }
 
+impl<T> Default for Lock<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        T::default().into()
+    }
+}
+
 impl<T> Clone for Lock<T> {
     fn clone(&self) -> Self {
         let Self(id, lk) = self;
@@ -61,6 +70,15 @@ impl<T> Lock<T> {
 impl<T> From<T> for ReadLock<T> {
     fn from(x: T) -> Self {
         ReadLock(x.into())
+    }
+}
+
+impl<T> Default for ReadLock<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        T::default().into()
     }
 }
 
