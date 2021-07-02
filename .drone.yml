@@ -22,3 +22,4 @@ steps:
         from_secret: discord_webhook_id
       webhook_token:
         from_secret: discord_webhook_token
+      avatar_url: https://www.vippng.com/png/detail/31-319881_smug-haruhi-haruhi-suzumiya-png.png
