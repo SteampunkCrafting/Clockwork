@@ -22,4 +22,4 @@ steps:
         from_secret: discord_webhook_id
       webhook_token:
         from_secret: discord_webhook_token
-      avatar_url: https://www.vippng.com/png/detail/31-319881_smug-haruhi-haruhi-suzumiya-png.png
+      avatar_url: https://www.sos-dan.ru/files/pedia/analysis/season_two/02/ee1_04.jpg
