@@ -1,2 +1,8 @@
 [workspace]
 members = ["core", "main_loop", "legion_ecs", "rapier_physics_3d", "engine"]
+
+[profile]
+[profile.dev.package.rapier3d]
+opt-level = 3
+[profile.release]
+codegen-units = 1

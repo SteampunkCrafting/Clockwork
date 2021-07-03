@@ -20,10 +20,3 @@ path = "../main_loop"
 [dependencies.legion_ecs]
 package = "spc_clockwork_legion_ecs"
 path = "../legion_ecs"
-
-[profile]
-[profile.dev.package.rapier3d]
-opt-level = 3
-
-[profile.release]
-codegen-units = 1
