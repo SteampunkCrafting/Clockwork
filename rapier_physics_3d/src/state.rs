@@ -1,4 +1,3 @@
-use core::prelude::Lock;
 use core::sync::WriteLock;
 
 use legion_ecs::state::LegionStateBuilder;
