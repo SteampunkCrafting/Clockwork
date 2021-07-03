@@ -31,7 +31,7 @@ where
 }
 
 impl RapierState3D {
-    pub(crate) fn user_locks(
+    pub fn user_locks(
         &self,
     ) -> (
         Lock<Gravity>,

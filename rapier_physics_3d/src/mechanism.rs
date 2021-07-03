@@ -1,6 +1,5 @@
 use crate::state::RapierState3D;
 use ::core::prelude::{Mechanism, Substate};
-use legion_ecs::state::LegionState;
 use main_loop::prelude::Event;
 use rapier3d::{dynamics::IntegrationParameters, pipeline::PhysicsPipeline};
 
@@ -9,7 +8,7 @@ pub struct Rapier3DTicker(PhysicsPipeline, IntegrationParameters);
 
 impl<S> Mechanism<S, Event> for Rapier3DTicker
 where
-    S: Substate<RapierState3D> + Substate<LegionState>,
+    S: Substate<RapierState3D>,
 {
     fn name(&self) -> &'static str {
         "Rapier 3D Physics Ticker"
@@ -17,19 +16,6 @@ where
 
     fn clink(&mut self, state: &mut S, event: Event) {
         match event {
-            Event::Initialization => {
-                let (g, b, c, j, i, bp, np, ccd) =
-                    Substate::<RapierState3D>::substate(state).user_locks();
-                let LegionState { resources: res, .. } = state.substate_mut();
-                res.insert(g);
-                res.insert(b);
-                res.insert(c);
-                res.insert(j);
-                res.insert(i);
-                res.insert(bp);
-                res.insert(np);
-                res.insert(ccd);
-            }
             Event::Tick(delta_time) => {
                 let Rapier3DTicker(pipeline, integration_parameters) = self;
                 let RapierState3D {
