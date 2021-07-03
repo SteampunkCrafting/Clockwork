@@ -1,4 +1,5 @@
 use core::prelude::Lock;
+use core::sync::WriteLock;
 
 use legion_ecs::state::LegionStateBuilder;
 use rapier3d::{
@@ -12,14 +13,14 @@ use rapier3d::{
 pub struct Gravity(pub Vector<f32>);
 
 pub struct RapierState3D {
-    pub(crate) gravity: Lock<Gravity>,
-    pub(crate) bodies: Lock<RigidBodySet>,
-    pub(crate) colliders: Lock<ColliderSet>,
-    pub(crate) joints: Lock<JointSet>,
-    pub(crate) islands: Lock<IslandManager>,
-    pub(crate) broad_phase: Lock<BroadPhase>,
-    pub(crate) narrow_phase: Lock<NarrowPhase>,
-    pub(crate) ccd_solver: Lock<CCDSolver>,
+    pub(crate) gravity: WriteLock<Gravity>,
+    pub(crate) bodies: WriteLock<RigidBodySet>,
+    pub(crate) colliders: WriteLock<ColliderSet>,
+    pub(crate) joints: WriteLock<JointSet>,
+    pub(crate) islands: WriteLock<IslandManager>,
+    pub(crate) broad_phase: WriteLock<BroadPhase>,
+    pub(crate) narrow_phase: WriteLock<NarrowPhase>,
+    pub(crate) ccd_solver: WriteLock<CCDSolver>,
 }
 
 impl<T> From<T> for Gravity
@@ -44,14 +45,14 @@ impl RapierState3D {
             ccd_solver,
         } = self;
         ecs_state_builder
-            .with_resource(gravity.clone())
-            .with_resource(bodies.clone())
-            .with_resource(colliders.clone())
-            .with_resource(joints.clone())
-            .with_resource(islands.clone())
-            .with_resource(broad_phase.clone())
-            .with_resource(narrow_phase.clone())
-            .with_resource(ccd_solver.clone())
+            .with_resource(gravity.downgrade_to_user_lock())
+            .with_resource(bodies.downgrade_to_user_lock())
+            .with_resource(colliders.downgrade_to_user_lock())
+            .with_resource(joints.downgrade_to_user_lock())
+            .with_resource(islands.downgrade_to_user_lock())
+            .with_resource(broad_phase.downgrade_to_user_lock())
+            .with_resource(narrow_phase.downgrade_to_user_lock())
+            .with_resource(ccd_solver.downgrade_to_user_lock())
     }
 }
 

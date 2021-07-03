@@ -13,15 +13,17 @@ use std::{
 
 static GLOBAL_LOCK_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
-pub struct Lock<T>(usize, Arc<RwLock<T>>);
+pub struct WriteLock<T>(usize, Arc<RwLock<T>>);
 
-pub struct ReadLock<T>(Lock<T>);
+pub struct ReadLock<T>(WriteLock<T>);
+
+pub struct Lock<T>(WriteLock<T>);
 
 pub struct Guard<'a, T>(RwLockWriteGuard<'a, T>);
 
 pub struct ReadGuard<'a, T>(RwLockReadGuard<'a, T>);
 
-impl<T> From<T> for Lock<T> {
+impl<T> From<T> for WriteLock<T> {
     fn from(x: T) -> Self {
         Self(
             GLOBAL_LOCK_COUNTER.fetch_add(1, Relaxed),
@@ -30,7 +32,7 @@ impl<T> From<T> for Lock<T> {
     }
 }
 
-impl<T> Default for Lock<T>
+impl<T> Default for WriteLock<T>
 where
     T: Default,
 {
@@ -39,21 +41,25 @@ where
     }
 }
 
-impl<T> Clone for Lock<T> {
+impl<T> Clone for WriteLock<T> {
     fn clone(&self) -> Self {
         let Self(id, lk) = self;
         Self(id.clone(), lk.clone())
     }
 }
 
-impl<T> Lock<T> {
+impl<T> WriteLock<T> {
     pub fn id(&self) -> usize {
         let Self(id, _) = self;
         id.clone()
     }
 
-    pub fn downgrade(&self) -> ReadLock<T> {
+    pub fn downgrade_to_read_lock(&self) -> ReadLock<T> {
         ReadLock(self.clone())
+    }
+
+    pub fn downgrade_to_user_lock(&self) -> Lock<T> {
+        Lock(self.clone())
     }
 
     pub fn lock(&self) -> ReadGuard<'_, T> {
@@ -98,6 +104,38 @@ impl<T> ReadLock<T> {
     pub fn lock(&self) -> ReadGuard<'_, T> {
         let Self(inner) = self;
         inner.lock()
+    }
+}
+
+impl<T> From<T> for Lock<T> {
+    fn from(x: T) -> Self {
+        Self(WriteLock::from(x))
+    }
+}
+
+impl<T> Default for Lock<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        T::default().into()
+    }
+}
+
+impl<T> Lock<T> {
+    pub fn id(&self) -> usize {
+        let Self(inner) = self;
+        inner.id()
+    }
+
+    pub fn lock(&self) -> ReadGuard<'_, T> {
+        let Self(inner) = self;
+        inner.lock()
+    }
+
+    pub fn lock_mut(&mut self) -> Guard<'_, T> {
+        let Self(inner) = self;
+        inner.lock_mut()
     }
 }
 
