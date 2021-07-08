@@ -19,6 +19,13 @@ pub struct ReadLock<T>(WriteLock<T>);
 
 pub struct Lock<T>(WriteLock<T>);
 
+unsafe impl<T> Send for ReadLock<T> {}
+unsafe impl<T> Sync for ReadLock<T> {}
+unsafe impl<T> Send for WriteLock<T> {}
+unsafe impl<T> Sync for WriteLock<T> {}
+unsafe impl<T> Send for Lock<T> {}
+unsafe impl<T> Sync for Lock<T> {}
+
 pub struct Guard<'a, T>(RwLockWriteGuard<'a, T>);
 
 pub struct ReadGuard<'a, T>(RwLockReadGuard<'a, T>);
