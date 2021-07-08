@@ -1,5 +1,12 @@
 [workspace]
-members = ["core", "main_loop", "legion_ecs", "rapier_physics_3d", "engine"]
+members = [
+    "core",
+    "main_loop",
+    "legion_ecs",
+    "rapier_physics_3d",
+    "engine",
+    "asset_storage",
+]
 
 [profile]
 [profile.dev.package.rapier3d]
