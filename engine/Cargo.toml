@@ -6,15 +6,20 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+derive_builder = "0.10.2"
+
 [dependencies.core]
 path = "../core"
 package = "spc_clockwork_core"
+
 [dependencies.ecs]
 path = "../legion_ecs"
 package = "spc_clockwork_legion_ecs"
+
 [dependencies.main_loop]
 path = "../main_loop"
 package = "spc_clockwork_main_loop"
+
 [dependencies.physics]
 path = "../rapier_physics_3d"
 package = "spc_clockwork_rapier_physics_3d"
