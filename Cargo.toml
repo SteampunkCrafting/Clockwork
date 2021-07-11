@@ -6,10 +6,11 @@ members = [
     "rapier_physics_3d",
     "engine",
     "asset_storage",
+    "assets",
 ]
 
-[profile]
 [profile.dev.package.rapier3d]
 opt-level = 3
+
 [profile.release]
 codegen-units = 1
