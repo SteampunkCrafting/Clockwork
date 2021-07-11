@@ -141,11 +141,11 @@ where
 /// }
 ///
 /// fn main_loop(
-///     mut state: Box<State>,
+///     mut state: State,
 ///     mut mechanisms: Mechanisms<State, Event>
 /// ) {
 ///     loop {
-///         assert_eq!(*state, State(0)); // Checking the state
+///         assert_eq!(state, State(0)); // Checking the state
 ///         mechanisms.clink_event(
 ///             &mut state,
 ///             Event::Tick,
@@ -171,7 +171,7 @@ where
 /// the `MainLoop` should return `()`. After the stabilization occurs,
 /// the main loop will be returning `!`, which might become a breaking change.
 /// For more information, see this [issue](https://github.com/rust-lang/rust/issues/35121)
-pub trait MainLoop<S, E>: FnOnce(Box<S>, Mechanisms<S, E>)
+pub trait MainLoop<S, E>: FnOnce(S, Mechanisms<S, E>)
 where
     S: ClockworkState,
     E: ClockworkEvent,
@@ -179,7 +179,7 @@ where
 }
 impl<T, S, E> MainLoop<S, E> for T
 where
-    T: FnOnce(Box<S>, Mechanisms<S, E>),
+    T: FnOnce(S, Mechanisms<S, E>),
     S: ClockworkState,
     E: ClockworkEvent,
 {
@@ -192,7 +192,7 @@ where
     E: ClockworkEvent,
 {
     main_loop: Box<dyn MainLoop<S, E>>,
-    state: Box<S>,
+    state: S,
     mechanisms: Mechanisms<S, E>,
 }
 impl<S, E> Clockwork<S, E>
@@ -222,7 +222,7 @@ where
 /// A builder of the Clockwork game engine.
 pub struct ClockworkBuilder<S, E>(
     Option<Box<dyn MainLoop<S, E>>>,
-    Option<Box<S>>,
+    Option<S>,
     MechanismsBuilder<S, E>,
 )
 where
@@ -243,7 +243,7 @@ where
     }
 
     /// Sets the initial engine state
-    pub fn with_state(self, state: impl Into<Box<S>>) -> Self {
+    pub fn with_state(self, state: impl Into<S>) -> Self {
         info!("Setting initial engine state");
         Self {
             1: Some(state.into()),

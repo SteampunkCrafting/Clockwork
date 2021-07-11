@@ -22,7 +22,7 @@ fn clockwork_execution() {
         .unwrap()
         .set_the_clock();
 
-    fn test_main_loop(mut state: Box<TestState>, mut mechanisms: Mechanisms<TestState, TestEvent>) {
+    fn test_main_loop(mut state: TestState, mut mechanisms: Mechanisms<TestState, TestEvent>) {
         use borrow::BorrowMut;
 
         let (state, mechanisms) = (state.borrow_mut(), mechanisms.borrow_mut());

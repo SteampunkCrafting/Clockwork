@@ -12,7 +12,7 @@ use winit::{
 };
 
 /// A winit-based main loop
-pub fn main_loop<S>(mut state: Box<S>, mut mechanisms: Mechanisms<S, Event>)
+pub fn main_loop<S>(mut state: S, mut mechanisms: Mechanisms<S, Event>)
 where
     S: Substate<IOState>,
 {
@@ -34,7 +34,7 @@ where
 
         /* -- WINDOW AND SURFACE -- */
         info!("Creating window and Vulkan surface");
-        Substate::<IOState>::substate_mut(state.as_mut()).vk_surface = Some(
+        Substate::<IOState>::substate_mut(&mut state).vk_surface = Some(
             WindowBuilder::new()
                 .build_vk_surface(&event_loop, instance)
                 .map_or_else(
@@ -50,7 +50,7 @@ where
 
     info!("Finished initialization of the main loop");
     info!("Initializing mechanisms");
-    mechanisms.clink_event(&mut *state, Event::Initialization);
+    mechanisms.clink_event(&mut state, Event::Initialization);
     info!("Finished initializing mechanisms");
 
     /* ---- EVENT LOOP RUN ---- */
@@ -76,7 +76,7 @@ where
                     ..
                 },
             ..
-        } = Substate::<IOState>::substate_mut(&mut *state);
+        } = Substate::<IOState>::substate_mut(&mut state);
         match ev {
             MainEventsCleared => match (
                 current_time - last_tick_start_at,
@@ -116,18 +116,18 @@ where
             },
             UserEvent(Event::Tick(delta_time)) => {
                 debug!("Performing tick (delta time: {:?})", delta_time);
-                mechanisms.clink_event(&mut *state, Event::Tick(delta_time));
+                mechanisms.clink_event(&mut state, Event::Tick(delta_time));
                 debug!("Finished tick");
             }
             UserEvent(Event::Draw(delta_time)) => {
                 debug!("Performing draw call (delta time: {:?})", delta_time);
-                mechanisms.clink_event(&mut *state, Event::Draw(delta_time));
+                mechanisms.clink_event(&mut state, Event::Draw(delta_time));
                 debug!("Finished draw call");
             }
             LoopDestroyed => {
                 info!("Terminating main loop");
                 info!("Terminating mechanisms");
-                mechanisms.clink_event(&mut *state, Event::Termination);
+                mechanisms.clink_event(&mut state, Event::Termination);
                 info!("Finished terminating mechanisms");
             }
             _ => {}
