@@ -42,3 +42,13 @@ where
         Self(Box::new(eval_fn), Default::default())
     }
 }
+
+impl<T, U> Default for AssetStorage<T, U>
+where
+    T: AssetStorageKey,
+    U: Default,
+{
+    fn default() -> Self {
+        Self(Box::new(|_| Default::default()), Default::default())
+    }
+}
