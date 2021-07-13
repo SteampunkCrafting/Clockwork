@@ -1,8 +1,8 @@
+use crate::event::Event;
 use derive_builder::Builder;
 use getset::Getters;
 use std::*;
-use vulkano::swapchain::Surface;
-use winit::window::Window;
+use winit::event_loop::EventLoop;
 
 #[derive(Getters, Builder)]
 #[builder(pattern = "owned", setter(into, skip, prefix = "with"))]
@@ -21,8 +21,10 @@ pub struct IOState {
     /// Runtime statistics
     pub statistics: Statistics,
 
-    /// Vulkano surface handle
-    pub vk_surface: Option<sync::Arc<Surface<Window>>>,
+    /// Winit event loop.
+    /// This field is `Some` (and hence the event loop is available to mechanisms)
+    /// only at the initialization stage.
+    pub event_loop: Option<EventLoop<Event>>,
 }
 impl IOState {
     /// Creates new builder of the IOState

@@ -3,12 +3,9 @@ use crate::state::*;
 use core::prelude::*;
 use log::*;
 use std::*;
-use vulkano::instance::Instance;
-use vulkano_win::VkSurfaceBuild;
 use winit::{
     event::Event::{LoopDestroyed, MainEventsCleared, UserEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
 };
 
 /// A winit-based main loop
@@ -20,40 +17,27 @@ where
     info!("Initializing main loop");
     let event_loop = EventLoop::<Event>::with_user_event();
     let event_proxy = event_loop.create_proxy();
-    {
-        /* -- INSTANCE -- */
-        info!("Creating Vulkan instance");
-        let instance = Instance::new(None, &vulkano_win::required_extensions(), None).map_or_else(
-            |err| {
-                error!("Fatal: Failed to create Vulkan instance");
-                panic!("{:#?}", err)
-            },
-            |instance| instance,
-        );
-        info!("Finished creating Vulkan instance");
 
-        /* -- WINDOW AND SURFACE -- */
-        info!("Creating window and Vulkan surface");
-        Substate::<IOState>::substate_mut(&mut state).vk_surface = Some(
-            WindowBuilder::new()
-                .build_vk_surface(&event_loop, instance)
-                .map_or_else(
-                    |err| {
-                        error!("Fatal: Failed to create window and Vulkan surface");
-                        panic!("{:#?}", err)
-                    },
-                    |surface| surface,
-                ),
-        );
-        info!("Finished creating window and Vulkan surface");
-    }
+    /* -- ADDING EVENT LOOP OBJECT TO THE STATE -- */
+    info!("Adding winit event loop to the engine state");
+    Substate::<IOState>::substate_mut(&mut state).event_loop = Some(event_loop);
+    info!("Done adding winit event loop to the engine state");
 
+    /* -- INITIALIZING MECHANISMS -- */
     info!("Finished initialization of the main loop");
     info!("Initializing mechanisms");
     mechanisms.clink_event(&mut state, Event::Initialization);
     info!("Finished initializing mechanisms");
 
-    /* ---- EVENT LOOP RUN ---- */
+    /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
+    info!("Retreiving event loop object from the engine state");
+    let event_loop = Substate::<IOState>::substate_mut(&mut state)
+        .event_loop
+        .take()
+        .expect("Winit event loop has been taken by a mechanism during the initialization process");
+    info!("Done retreiving event loop object from the engine state");
+
+    /* ---- EVENT LOOP LAUNCH ---- */
     info!("Starting main loop");
 
     let mut last_tick_start_at = time::Instant::now();
@@ -78,6 +62,22 @@ where
             ..
         } = Substate::<IOState>::substate_mut(&mut state);
         match ev {
+            UserEvent(Event::Tick(delta_time)) => {
+                debug!("Performing tick (delta time: {:?})", delta_time);
+                mechanisms.clink_event(&mut state, Event::Tick(delta_time));
+                debug!("Finished tick");
+            }
+            UserEvent(Event::Draw(delta_time)) => {
+                debug!("Performing draw call (delta time: {:?})", delta_time);
+                mechanisms.clink_event(&mut state, Event::Draw(delta_time));
+                debug!("Finished draw call");
+            }
+            LoopDestroyed => {
+                info!("Terminating main loop");
+                info!("Terminating mechanisms");
+                mechanisms.clink_event(&mut state, Event::Termination);
+                info!("Finished terminating mechanisms");
+            }
             MainEventsCleared => match (
                 current_time - last_tick_start_at,
                 current_time - last_draw_start_at,
@@ -114,22 +114,6 @@ where
                     }
                 }
             },
-            UserEvent(Event::Tick(delta_time)) => {
-                debug!("Performing tick (delta time: {:?})", delta_time);
-                mechanisms.clink_event(&mut state, Event::Tick(delta_time));
-                debug!("Finished tick");
-            }
-            UserEvent(Event::Draw(delta_time)) => {
-                debug!("Performing draw call (delta time: {:?})", delta_time);
-                mechanisms.clink_event(&mut state, Event::Draw(delta_time));
-                debug!("Finished draw call");
-            }
-            LoopDestroyed => {
-                info!("Terminating main loop");
-                info!("Terminating mechanisms");
-                mechanisms.clink_event(&mut state, Event::Termination);
-                info!("Finished terminating mechanisms");
-            }
             _ => {}
         };
         trace!("Finished handling event: {:?}", ev);
