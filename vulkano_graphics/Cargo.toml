@@ -1,0 +1,36 @@
+[package]
+name = "spc_clockwork_vulkano_graphics"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+log = "0.4.14"
+vulkano = "0.20.0"
+vulkano-win = "0.20.0"
+vulkano-shaders = "0.20.0"
+winit = "0.24.0"
+derive_builder = "0.10.2"
+
+[dependencies.core]
+package = "spc_clockwork_core"
+path = "../core"
+
+[dependencies.main_loop]
+package = "spc_clockwork_main_loop"
+path = "../main_loop"
+
+[dependencies.asset_storage]
+package = "spc_clockwork_asset_storage"
+path = "../asset_storage"
+
+[dependencies.assets]
+package = "spc_clockwork_assets"
+path = "../assets"
+
+[dependencies.legion_ecs]
+package = "spc_clockwork_legion_ecs"
+path = "../legion_ecs"
+
+[dependencies.rapier_physics_3d]
+package = "spc_clockwork_rapier_physics_3d"
+path = "../rapier_physics_3d"

@@ -23,3 +23,7 @@ package = "spc_clockwork_main_loop"
 [dependencies.physics]
 path = "../rapier_physics_3d"
 package = "spc_clockwork_rapier_physics_3d"
+
+[dependencies.graphics]
+path = "../vulkano_graphics"
+package = "spc_clockwork_vulkano_graphics"

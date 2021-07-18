@@ -7,6 +7,7 @@ members = [
     "engine",
     "asset_storage",
     "assets",
+    "vulkano_graphics",
 ]
 
 [profile.dev.package.rapier3d]
