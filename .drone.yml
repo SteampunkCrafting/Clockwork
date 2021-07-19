@@ -8,12 +8,16 @@ platform:
 
 steps:
   - name: Test in debug mode
-    image: rust
+    image: rust:buster
     commands:
+      - apt-get update
+      - apt-get -y install --no-install-recommends build-essential python cmake libvulkan-dev vulkan-utils
       - cargo test
   - name: Test in release mode
-    image: rust
+    image: rust:buster
     commands:
+      - apt-get update
+      - apt-get -y install --no-install-recommends build-essential python cmake libvulkan-dev vulkan-utils
       - cargo test --release
   - name: Discord report
     image: appleboy/drone-discord
