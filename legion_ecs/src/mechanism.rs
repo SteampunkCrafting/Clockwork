@@ -1,5 +1,5 @@
 use crate::state::LegionState;
-use core::prelude::*;
+use clockwork_core::prelude::*;
 pub use legion::system;
 use legion::{systems::Builder, systems::ParallelRunnable, Schedule};
 

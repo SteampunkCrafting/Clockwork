@@ -1,5 +1,5 @@
 use crate::state::RapierState3D;
-use ::core::prelude::{Mechanism, Substate};
+use clockwork_core::prelude::{Mechanism, Substate};
 use main_loop::prelude::Event;
 use rapier3d::{dynamics::IntegrationParameters, pipeline::PhysicsPipeline};
 

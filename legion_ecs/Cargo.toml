@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Yaroslav V. Petrov <yaroslav.v.petrov@yandex.ru>"]
 edition = "2018"
 
-[dependencies.core]
+[dependencies.clockwork_core]
 package = "spc_clockwork_core"
 path = "../core"
 

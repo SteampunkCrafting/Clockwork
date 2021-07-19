@@ -1,4 +1,4 @@
-use core::{prelude::Lock, sync::WriteLock};
+use clockwork_core::{prelude::Lock, sync::WriteLock};
 
 use rapier3d::{
     dynamics::{CCDSolver, JointSet, RigidBodySet},

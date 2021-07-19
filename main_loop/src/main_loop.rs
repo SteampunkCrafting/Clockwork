@@ -1,6 +1,6 @@
 use crate::event::Event;
 use crate::state::*;
-use core::prelude::*;
+use clockwork_core::prelude::*;
 use log::*;
 use std::*;
 use winit::{

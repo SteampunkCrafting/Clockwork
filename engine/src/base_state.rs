@@ -1,4 +1,4 @@
-use core::prelude::Substate;
+use clockwork_core::prelude::Substate;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use main_loop::prelude::IOState;

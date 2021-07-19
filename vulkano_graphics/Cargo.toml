@@ -11,7 +11,7 @@ vulkano-shaders = "0.20.0"
 winit = "0.24.0"
 derive_builder = "0.10.2"
 
-[dependencies.core]
+[dependencies.clockwork_core]
 package = "spc_clockwork_core"
 path = "../core"
 

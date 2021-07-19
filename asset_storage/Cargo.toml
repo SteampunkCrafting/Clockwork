@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 strum = "0.21"
 strum_macros = "0.21"
+
 [dependencies.clockwork_core]
 package = "spc_clockwork_core"
 path = "../core"

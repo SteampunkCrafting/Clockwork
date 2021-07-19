@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 derive_builder = "0.10.2"
 
-[dependencies.core]
+[dependencies.clockwork_core]
 path = "../core"
 package = "spc_clockwork_core"
 

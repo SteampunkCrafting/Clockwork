@@ -1,4 +1,4 @@
-use core::{clockwork::Substate, prelude::Mechanism};
+use clockwork_core::{clockwork::Substate, prelude::Mechanism};
 use log::*;
 use main_loop::{
     prelude::{Event, Window},
