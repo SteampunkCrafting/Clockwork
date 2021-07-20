@@ -1,5 +1,6 @@
+use itertools::Itertools;
+
 use crate::clockwork::*;
-use itertools::*;
 use std::*;
 
 /// Mechanism is an event handler to clockwork events.
@@ -12,8 +13,20 @@ where
 {
     /// Defines a mechanism name
     fn name(&self) -> &'static str;
+
     /// Defines a reaction of the mechanism on the event
     fn clink(&mut self, state: &mut S, event: E);
+
+    /// Defines a set of events, which this mechanism is handling.
+    /// The method is called once during the mechanisms assembly.
+    /// Has a default implementation.
+    /// If None is returned, then the mechanism will be clinkd upon every event.
+    /// It is recommended to implement this manually, as it might save some cpu
+    /// resources, especially if there is a complex event system, or big amount of
+    /// mechanisms.
+    fn handled_events(&self) -> Option<&'static [E]> {
+        None
+    }
 }
 
 /// A read-only version of Mechanism.
@@ -26,8 +39,20 @@ where
 {
     /// Defines a mechanism name
     fn name(&self) -> &'static str;
+
     /// Defines a reaction of the mechanism on the event
     fn clink(&mut self, state: &S, event: E);
+
+    /// Defines a set of events, which this mechanism is handling.
+    /// The method is called once during the mechanisms assembly.
+    /// Has a default implementation.
+    /// If None is returned, then the mechanism will be clinkd upon every event.
+    /// It is recommended to implement this manually, as it might save some cpu
+    /// resources, especially if there is a complex event system, or big amount of
+    /// mechanisms.
+    fn handled_events(&self) -> Option<&'static [E]> {
+        None
+    }
 }
 
 /// A struct, which is owned by the main loop.
@@ -39,11 +64,25 @@ where
     S: ClockworkState,
     E: ClockworkEvent,
 {
+    /// Mechanism storage
     all_mechanisms: Vec<Box<dyn Mechanism<S, E>>>,
+
+    /// Mapping from event to mechanism indices
     events_to_mechanisms: collections::HashMap<E, Vec<usize>>,
+
+    /// A set of mechanisms, which respond to every event
+    any_event_mechanisms: Vec<usize>,
+
+    /// Read mechanism storage
     all_read_mechanisms: Vec<Box<dyn ReadMechanism<S, E>>>,
+
+    /// Mapping from event to read mechanism indices
     events_to_read_mechanisms: collections::HashMap<E, Vec<usize>>,
+
+    /// A set of read mechanisms, which respond to every event
+    any_event_read_mechanisms: Vec<usize>,
 }
+
 impl<S, E> Mechanisms<S, E>
 where
     S: ClockworkState,
@@ -56,23 +95,47 @@ where
         let Self {
             all_mechanisms,
             events_to_mechanisms,
+            any_event_mechanisms,
             all_read_mechanisms,
             events_to_read_mechanisms,
+            any_event_read_mechanisms,
         } = self;
-        events_to_mechanisms.get(&event).map_or((), |ids| {
-            ids.iter().cloned().for_each(|id| unsafe {
+
+        for id in any_event_mechanisms {
+            unsafe {
                 all_mechanisms
-                    .get_unchecked_mut(id)
-                    .clink(state, event.clone())
-            })
-        });
-        events_to_read_mechanisms.get(&event).map_or((), |ids| {
-            ids.iter().cloned().for_each(|id| unsafe {
+                    .get_unchecked_mut(*id)
+                    .clink(state, event.clone());
+            }
+        }
+
+        if let Some(ids) = events_to_mechanisms.get(&event) {
+            for id in ids {
+                unsafe {
+                    all_mechanisms
+                        .get_unchecked_mut(*id)
+                        .clink(state, event.clone());
+                }
+            }
+        }
+
+        for id in any_event_read_mechanisms {
+            unsafe {
                 all_read_mechanisms
-                    .get_unchecked_mut(id)
-                    .clink(state, event.clone())
-            })
-        });
+                    .get_unchecked_mut(*id)
+                    .clink(state, event.clone());
+            }
+        }
+
+        if let Some(ids) = events_to_read_mechanisms.get(&event) {
+            for id in ids {
+                unsafe {
+                    all_read_mechanisms
+                        .get_unchecked_mut(*id)
+                        .clink(state, event.clone());
+                }
+            }
+        }
     }
 }
 
@@ -84,8 +147,10 @@ where
 {
     all_mechanisms: Vec<Box<dyn Mechanism<S, E>>>,
     events_to_mechanisms: collections::HashMap<E, Vec<usize>>,
+    any_event_mechanisms: Vec<usize>,
     all_read_mechanisms: Vec<Box<dyn ReadMechanism<S, E>>>,
     events_to_read_mechanisms: collections::HashMap<E, Vec<usize>>,
+    any_event_read_mechanisms: Vec<usize>,
 }
 
 impl<'a, S, E> MechanismsBuilder<S, E>
@@ -93,45 +158,54 @@ where
     S: ClockworkState,
     E: ClockworkEvent,
 {
-    pub fn with_mechanism(
-        mut self,
-        mechanism: impl Mechanism<S, E> + 'static,
-        events: impl IntoIterator<Item = E>,
-    ) -> Self {
+    pub fn with_mechanism(mut self, mechanism: impl Mechanism<S, E> + 'static) -> Self {
         let Self {
             all_mechanisms,
             events_to_mechanisms,
+            any_event_mechanisms,
             ..
         } = &mut self;
         let id = all_mechanisms.len();
 
-        all_mechanisms.push(Box::new(mechanism));
-        events
-            .into_iter()
-            .unique()
-            .for_each(|event| events_to_mechanisms.entry(event).or_default().push(id));
+        if let Some(events) = mechanism.handled_events() {
+            for event in events {
+                events_to_mechanisms
+                    .entry(event.clone())
+                    .or_default()
+                    .push(id);
+            }
+        } else {
+            any_event_mechanisms.push(id);
+        }
 
+        all_mechanisms.push(Box::new(mechanism));
         self
     }
 
     pub fn with_read_mechanism(
         mut self,
         read_mechanism: impl ReadMechanism<S, E> + 'static,
-        events: impl IntoIterator<Item = E>,
     ) -> Self {
         let Self {
             all_read_mechanisms,
             events_to_read_mechanisms,
+            any_event_read_mechanisms,
             ..
         } = &mut self;
         let id = all_read_mechanisms.len();
 
-        all_read_mechanisms.push(Box::new(read_mechanism));
-        events
-            .into_iter()
-            .unique()
-            .for_each(|event| events_to_read_mechanisms.entry(event).or_default().push(id));
+        if let Some(events) = read_mechanism.handled_events() {
+            for event in events {
+                events_to_read_mechanisms
+                    .entry(event.clone())
+                    .or_default()
+                    .push(id);
+            }
+        } else {
+            any_event_read_mechanisms.push(id);
+        }
 
+        all_read_mechanisms.push(Box::new(read_mechanism));
         self
     }
 
@@ -139,17 +213,22 @@ where
         let Self {
             all_mechanisms,
             events_to_mechanisms,
+            any_event_mechanisms,
             all_read_mechanisms,
             events_to_read_mechanisms,
+            any_event_read_mechanisms,
         } = self;
         Ok(Mechanisms {
             all_mechanisms,
             events_to_mechanisms,
+            any_event_mechanisms,
             all_read_mechanisms,
             events_to_read_mechanisms,
+            any_event_read_mechanisms,
         })
     }
 }
+
 impl<S, E> Default for MechanismsBuilder<S, E>
 where
     S: ClockworkState,
@@ -159,8 +238,10 @@ where
         MechanismsBuilder {
             all_mechanisms: Default::default(),
             events_to_mechanisms: Default::default(),
+            any_event_mechanisms: Default::default(),
             all_read_mechanisms: Default::default(),
             events_to_read_mechanisms: Default::default(),
+            any_event_read_mechanisms: Default::default(),
         }
     }
 }

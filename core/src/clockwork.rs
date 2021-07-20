@@ -256,45 +256,23 @@ where
     /// This mechanism is allowed to do both: reading and writing the
     /// state of the game. If the mechanism only intends to read the game
     /// state, try using `with_read_mechanism`.
-    pub fn with_mechanism(
-        self,
-        mechanism: impl Mechanism<S, E> + 'static,
-        events: impl IntoIterator<Item = E> + fmt::Debug,
-    ) -> Self {
+    pub fn with_mechanism(self, mechanism: impl Mechanism<S, E> + 'static) -> Self {
         info!("Adding mechanism: {}", mechanism.name());
-        info!(
-            "Subscribing mechanism \"{}\" to events: {:?}",
-            mechanism.name(),
-            events
-        );
         let Self(main_loop, state, mechanisms) = self;
-        Self(
-            main_loop,
-            state,
-            mechanisms.with_mechanism(mechanism, events),
-        )
+        Self(main_loop, state, mechanisms.with_mechanism(mechanism))
     }
 
     /// Adds a read-only mechanism, and subscribes it to the events provided.
     ///
     /// If it is also required for the mechanism to write into the game state,
     /// use `with_mechanism` instead.
-    pub fn with_read_mechanism(
-        self,
-        read_mechanism: impl ReadMechanism<S, E> + 'static,
-        events: impl IntoIterator<Item = E> + fmt::Debug,
-    ) -> Self {
+    pub fn with_read_mechanism(self, read_mechanism: impl ReadMechanism<S, E> + 'static) -> Self {
         info!("Adding read-only mechanism: {}", read_mechanism.name());
-        info!(
-            "Subscribing mechanism \"{}\" to events: {:?}",
-            read_mechanism.name(),
-            events
-        );
         let Self(main_loop, state, mechanisms) = self;
         Self(
             main_loop,
             state,
-            mechanisms.with_read_mechanism(read_mechanism, events),
+            mechanisms.with_read_mechanism(read_mechanism),
         )
     }
 

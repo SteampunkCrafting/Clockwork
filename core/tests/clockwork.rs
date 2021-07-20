@@ -6,18 +6,12 @@ fn clockwork_execution() {
     Clockwork::<TestState, TestEvent>::builder()
         .with_state(0)
         .with_main_loop(test_main_loop)
-        .with_mechanism(TestMechanism(1), vec![TestEvent::Tick])
-        .with_mechanism(TestMechanism(2), vec![TestEvent::Tick])
-        .with_mechanism(TestMechanism(3), vec![TestEvent::Tick])
-        .with_mechanism(TestMechanism(0), vec![TestEvent::Tick])
-        .with_read_mechanism(
-            TestReadMechanism(0, 6),
-            vec![TestEvent::Tick, TestEvent::Termination],
-        )
-        .with_read_mechanism(
-            TestReadMechanism(0, 6),
-            vec![TestEvent::Tick, TestEvent::Termination],
-        )
+        .with_mechanism(TestMechanism(1))
+        .with_mechanism(TestMechanism(2))
+        .with_mechanism(TestMechanism(3))
+        .with_mechanism(TestMechanism(0))
+        .with_read_mechanism(TestReadMechanism(0, 6))
+        .with_read_mechanism(TestReadMechanism(0, 6))
         .build()
         .unwrap()
         .set_the_clock();
@@ -46,6 +40,10 @@ fn clockwork_execution() {
                 _ => panic!("Mechanism did not subscribe to this event type"),
             }
         }
+
+        fn handled_events(&self) -> Option<&'static [TestEvent]> {
+            Some(&[TestEvent::Tick])
+        }
     }
 
     struct TestReadMechanism(pub i32, pub i32);
@@ -62,6 +60,10 @@ fn clockwork_execution() {
                 _ => panic!("Mechanism did not subscribe to this event type"),
             }
             *prev_state += *expect_inc;
+        }
+
+        fn handled_events(&self) -> Option<&'static [TestEvent]> {
+            Some(&[TestEvent::Tick, TestEvent::Termination])
         }
     }
 
