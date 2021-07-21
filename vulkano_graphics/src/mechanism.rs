@@ -27,7 +27,9 @@ use vulkano::{
 use vulkano_win::VkSurfaceBuild;
 use winit::window::WindowBuilder;
 
-struct PrivateState {
+use crate::vulkano_layer::VulkanoLayer;
+
+struct LocalState {
     dynamic_state: DynamicState,
     swapchain: Arc<Swapchain<Window>>,
     surface: Arc<Surface<Window>>,
@@ -40,7 +42,10 @@ struct PrivateState {
     queue: Arc<Queue>,
 }
 
-pub struct VulkanoGraphics(Option<PrivateState>);
+pub struct VulkanoGraphics {
+    layers: Vec<VulkanoLayer>,
+    state: Option<LocalState>,
+}
 
 impl<S> Mechanism<S, Event> for VulkanoGraphics
 where
@@ -51,25 +56,26 @@ where
     }
 
     fn clink(&mut self, state: &mut S, event: Event) {
-        match event {
-            Event::Draw(_) => {
-                /* ---- DESTRUCTURING STATE ---- */
-                let PrivateState {
-                    queue,
-                    previous_frame_end,
-                    recreate_swapchain,
-                    surface,
-                    swapchain,
-                    framebuffers,
-                    dynamic_state,
-                    render_pass,
-                    device,
-                    pipeline,
-                } = self
-                    .0
-                    .as_mut()
-                    .expect("Vulkano Graphics has not been initialized");
-
+        match (event, self) {
+            (
+                Event::Draw(_),
+                Self {
+                    state:
+                        Some(LocalState {
+                            dynamic_state,
+                            swapchain,
+                            surface,
+                            previous_frame_end,
+                            recreate_swapchain,
+                            framebuffers,
+                            render_pass,
+                            device,
+                            pipeline,
+                            queue,
+                        }),
+                    ..
+                },
+            ) => {
                 /* ---- LOCKING VULKAN STATE ---- */
                 previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -87,6 +93,7 @@ where
                 if suboptimal {
                     *recreate_swapchain = true;
                 }
+
                 if *recreate_swapchain {
                     let dimensions: [u32; 2] = surface.window().inner_size().into();
                     let (new_swapchain, new_images) =
@@ -206,7 +213,7 @@ where
                     Err(e) => panic!("{}", e),
                 };
             }
-            Event::Initialization => {
+            (Event::Initialization, vulkano_graphics @ Self { state: None, .. }) => {
                 info!("Initializing Vulkano Graphics");
 
                 /* ---- INSTANCE, SURFACE, GPU ---- */
@@ -340,28 +347,25 @@ where
                 let previous_frame_end = Some(sync::now(device.clone()).boxed());
 
                 /* ---- WRITING INTERNAL STATE ---- */
-                *self = Self(Some(PrivateState {
-                    dynamic_state,
-                    swapchain,
-                    surface,
-                    previous_frame_end,
-                    recreate_swapchain,
-                    framebuffers,
-                    render_pass,
-                    device,
-                    pipeline,
-                    queue,
-                }));
+                *vulkano_graphics = Self {
+                    layers: vec![],
+                    state: Some(LocalState {
+                        dynamic_state,
+                        swapchain,
+                        surface,
+                        previous_frame_end,
+                        recreate_swapchain,
+                        framebuffers,
+                        render_pass,
+                        device,
+                        pipeline,
+                        queue,
+                    }),
+                };
                 info!("Done initializing Vulkano Graphics")
             }
-            _ => (),
+            _ => unreachable!(),
         }
-    }
-}
-
-impl Default for VulkanoGraphics {
-    fn default() -> Self {
-        Self(None)
     }
 }
 
