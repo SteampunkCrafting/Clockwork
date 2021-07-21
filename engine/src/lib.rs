@@ -6,7 +6,7 @@ pub use physics;
 
 pub mod base_state;
 pub mod prelude {
-    pub use core::prelude::*;
+    pub use clockwork_core::prelude::*;
     pub use ecs::prelude::*;
     pub use graphics::prelude::*;
     pub use main_loop::prelude::*;
