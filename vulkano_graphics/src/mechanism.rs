@@ -1,4 +1,6 @@
-use crate::{graphics_state::GraphicsState, vulkano_layer::VulkanoLayer};
+use crate::{
+    graphics_state::GraphicsState, triangle_layer::TriangleLayer, vulkano_layer::VulkanoLayer,
+};
 use clockwork_core::{
     clockwork::{ClockworkState, Substate},
     prelude::Mechanism,
@@ -8,35 +10,40 @@ use main_loop::{
     prelude::{Event, Window},
     state::IOState,
 };
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use vulkano::{
-    buffer::{BufferUsage, CpuAccessibleBuffer},
     command_buffer::{AutoCommandBufferBuilder, DynamicState},
-    device::{Device, DeviceExtensions},
-    framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract, Subpass},
+    device::{Device, DeviceExtensions, Queue},
+    framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract},
     image::{ImageUsage, SwapchainImage},
-    impl_vertex,
     instance::{Instance, PhysicalDevice},
-    pipeline::{
-        vertex::OneVertexOneInstanceDefinition, viewport::Viewport, GraphicsPipeline,
-        GraphicsPipelineAbstract,
-    },
+    pipeline::viewport::Viewport,
     single_pass_renderpass,
     swapchain::{
-        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform,
-        Swapchain, SwapchainCreationError,
+        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, Surface,
+        SurfaceTransform, Swapchain, SwapchainCreationError,
     },
     sync::{self, FlushError, GpuFuture},
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::window::WindowBuilder;
 
+struct PrivateState {
+    swapchain: Arc<Swapchain<Window>>,
+    surface: Arc<Surface<Window>>,
+    previous_frame_end: Option<Box<dyn GpuFuture>>,
+    recreate_swapchain: bool,
+    framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
+    queue: Arc<Queue>,
+}
+
 pub struct VulkanoGraphics<S>
 where
     S: ClockworkState,
 {
     layers: Vec<Box<dyn VulkanoLayer<S>>>,
-    state: Option<GraphicsState>,
+    graphics_state: Option<GraphicsState>,
+    mechanism_state: Option<PrivateState>,
 }
 
 impl<S> Mechanism<S, Event> for VulkanoGraphics<S>
@@ -52,20 +59,17 @@ where
             (
                 Event::Draw(_),
                 Self {
-                    state:
-                        Some(GraphicsState {
-                            dynamic_state,
+                    layers,
+                    graphics_state: Some(graphics_state),
+                    mechanism_state:
+                        Some(PrivateState {
                             swapchain,
                             surface,
                             previous_frame_end,
                             recreate_swapchain,
                             framebuffers,
-                            render_pass,
-                            device,
-                            pipeline,
                             queue,
                         }),
-                    ..
                 },
             ) => {
                 /* ---- LOCKING VULKAN STATE ---- */
@@ -97,91 +101,33 @@ where
                     *swapchain = new_swapchain;
                     *framebuffers = window_size_dependent_setup(
                         &new_images,
-                        render_pass.clone(),
-                        dynamic_state,
+                        graphics_state.render_pass.clone(),
+                        &mut graphics_state.dynamic_state,
                     );
                     *recreate_swapchain = false;
                 }
 
                 /* ---- DRAWING ---- */
-                /* -- CREATING BUFFERS --  */
-                let triangle_vertex_buffer = {
-                    CpuAccessibleBuffer::from_iter(
-                        device.clone(),
-                        BufferUsage::all(),
-                        false,
-                        [
-                            Vertex {
-                                position: [-0.5, -0.25],
-                            },
-                            Vertex {
-                                position: [0.0, 0.5],
-                            },
-                            Vertex {
-                                position: [0.25, -0.1],
-                            },
-                        ]
-                        .iter()
-                        .cloned(),
-                    )
-                    .unwrap()
-                };
-
-                let instance_data_buffer = {
-                    let rows = 10;
-                    let cols = 10;
-                    let n_instances = rows * cols;
-                    let mut data = Vec::new();
-                    for c in 0..cols {
-                        for r in 0..rows {
-                            let half_cell_w = 0.5 / cols as f32;
-                            let half_cell_h = 0.5 / rows as f32;
-                            let x = half_cell_w + (c as f32 / cols as f32) * 2.0 - 1.0;
-                            let y = half_cell_h + (r as f32 / rows as f32) * 2.0 - 1.0;
-                            let position_offset = [x, y];
-                            let scale =
-                                (2.0 / rows as f32) * (c * rows + r) as f32 / n_instances as f32;
-                            data.push(InstanceData {
-                                position_offset,
-                                scale,
-                            });
-                        }
-                    }
-                    CpuAccessibleBuffer::from_iter(
-                        device.clone(),
-                        BufferUsage::all(),
-                        false,
-                        data.iter().cloned(),
-                    )
-                    .unwrap()
-                };
-
                 /* -- BUILDING COMMAND BUFFER --  */
                 let command_buffer = {
                     let mut builder = AutoCommandBufferBuilder::primary_one_time_submit(
-                        device.clone(),
+                        graphics_state.device.clone(),
                         queue.family(),
                     )
                     .unwrap();
-
                     builder
                         .begin_render_pass(
                             framebuffers[image_num].clone(),
                             vulkano::command_buffer::SubpassContents::Inline,
                             vec![[0.0, 0.0, 0.0].into()],
                         )
-                        .unwrap()
-                        .draw(
-                            pipeline.clone(),
-                            &dynamic_state,
-                            vec![triangle_vertex_buffer.clone(), instance_data_buffer.clone()],
-                            (),
-                            (),
-                        )
-                        .unwrap()
-                        .end_render_pass()
                         .unwrap();
 
+                    for layer in layers {
+                        layer.draw(state, graphics_state, &mut builder);
+                    }
+
+                    builder.end_render_pass().unwrap();
                     builder
                         .build()
                         .expect("Failed to construct Vulkan command buffer")
@@ -200,12 +146,15 @@ where
                     Ok(future) => Some(future.boxed()),
                     Err(FlushError::OutOfDate) => {
                         *recreate_swapchain = true;
-                        Some(sync::now(device.clone()).boxed())
+                        Some(sync::now(graphics_state.device.clone()).boxed())
                     }
                     Err(e) => panic!("{}", e),
                 };
             }
-            (Event::Initialization, vulkano_graphics @ Self { state: None, .. }) => {
+            (Event::Initialization, vulkano_graphics)
+                if vulkano_graphics.graphics_state.is_none()
+                    && vulkano_graphics.mechanism_state.is_none() =>
+            {
                 info!("Initializing Vulkano Graphics");
 
                 /* ---- INSTANCE, SURFACE, GPU ---- */
@@ -290,10 +239,6 @@ where
                 };
 
                 /* ---- STUFF TO ALLOCATE SOMEWHERE ELSE ---- */
-
-                let vs = vs::Shader::load(device.clone()).unwrap();
-                let fs = fs::Shader::load(device.clone()).unwrap();
-
                 let render_pass = Arc::new(
                     single_pass_renderpass!(
                         device.clone(),
@@ -313,18 +258,6 @@ where
                     .unwrap(),
                 );
 
-                let pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync> = Arc::new(
-                    GraphicsPipeline::start()
-                        .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
-                        .vertex_shader(vs.main_entry_point(), ())
-                        .triangle_list()
-                        .viewports_dynamic_scissors_irrelevant(1)
-                        .fragment_shader(fs.main_entry_point(), ())
-                        .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-                        .build(device.clone())
-                        .unwrap(),
-                );
-
                 let mut dynamic_state = DynamicState {
                     line_width: None,
                     viewports: None,
@@ -337,26 +270,45 @@ where
                     window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
                 let recreate_swapchain = false;
                 let previous_frame_end = Some(sync::now(device.clone()).boxed());
+                let layers: Vec<_> = vulkano_graphics.layers.drain(..).collect();
 
                 /* ---- WRITING INTERNAL STATE ---- */
                 *vulkano_graphics = Self {
-                    layers: vec![],
-                    state: Some(GraphicsState {
+                    layers,
+                    graphics_state: Some(GraphicsState {
                         dynamic_state,
+                        render_pass,
+                        device,
+                    }),
+                    mechanism_state: Some(PrivateState {
                         swapchain,
                         surface,
                         previous_frame_end,
                         recreate_swapchain,
                         framebuffers,
-                        render_pass,
-                        device,
-                        pipeline,
                         queue,
                     }),
                 };
                 info!("Done initializing Vulkano Graphics")
             }
             _ => unreachable!(),
+        }
+    }
+
+    fn handled_events(&self) -> Option<&'static [Event]> {
+        Some(&[Event::Initialization, Event::Draw(Duration::ZERO)])
+    }
+}
+
+impl<S> Default for VulkanoGraphics<S>
+where
+    S: ClockworkState,
+{
+    fn default() -> Self {
+        Self {
+            layers: vec![Box::new(TriangleLayer::default())],
+            graphics_state: None,
+            mechanism_state: None,
         }
     }
 }
@@ -387,48 +339,4 @@ fn window_size_dependent_setup(
             ) as Arc<dyn FramebufferAbstract + Send + Sync>
         })
         .collect::<Vec<_>>()
-}
-
-#[derive(Default, Debug, Clone)]
-struct Vertex {
-    position: [f32; 2],
-}
-impl_vertex!(Vertex, position);
-
-#[derive(Default, Debug, Clone)]
-struct InstanceData {
-    position_offset: [f32; 2],
-    scale: f32,
-}
-impl_vertex!(InstanceData, position_offset, scale);
-
-mod vs {
-    vulkano_shaders::shader! {
-        ty: "vertex",
-        src: "
-                #version 450
-                // The triangle vertex positions.
-                layout(location = 0) in vec2 position;
-                // The per-instance data.
-                layout(location = 1) in vec2 position_offset;
-                layout(location = 2) in float scale;
-                void main() {
-                    // Apply the scale and offset for the instance.
-                    gl_Position = vec4(position * scale + position_offset, 0.0, 1.0);
-                }
-            "
-    }
-}
-
-mod fs {
-    vulkano_shaders::shader! {
-        ty: "fragment",
-        src: "
-                #version 450
-                layout(location = 0) out vec4 f_color;
-                void main() {
-                    f_color = vec4(1.0, 0.0, 0.0, 1.0);
-                }
-            "
-    }
 }

@@ -6,6 +6,25 @@ pub trait VulkanoLayer<S>
 where
     S: ClockworkState,
 {
-    fn init(&mut self, state: &S, graphics_state: &GraphicsState);
-    fn draw(&mut self, state: &S, command_buffer: &mut AutoCommandBufferBuilder);
+    fn draw(
+        &mut self,
+        state: &S,
+        graphics_state: &GraphicsState,
+        command_buffer: &mut AutoCommandBufferBuilder,
+    );
+}
+
+impl<T, S> VulkanoLayer<S> for T
+where
+    T: FnMut(&S, &GraphicsState, &mut AutoCommandBufferBuilder),
+    S: ClockworkState,
+{
+    fn draw(
+        &mut self,
+        state: &S,
+        graphics_state: &GraphicsState,
+        command_buffer: &mut AutoCommandBufferBuilder,
+    ) {
+        self(state, graphics_state, command_buffer)
+    }
 }
