@@ -1,4 +1,7 @@
-use clockwork_core::{clockwork::Substate, prelude::Mechanism};
+use clockwork_core::{
+    clockwork::{ClockworkState, Substate},
+    prelude::Mechanism,
+};
 use log::*;
 use main_loop::{
     prelude::{Event, Window},
@@ -29,7 +32,7 @@ use winit::window::WindowBuilder;
 
 use crate::vulkano_layer::VulkanoLayer;
 
-struct LocalState {
+pub struct GraphicsState {
     dynamic_state: DynamicState,
     swapchain: Arc<Swapchain<Window>>,
     surface: Arc<Surface<Window>>,
@@ -42,12 +45,15 @@ struct LocalState {
     queue: Arc<Queue>,
 }
 
-pub struct VulkanoGraphics {
-    layers: Vec<VulkanoLayer>,
-    state: Option<LocalState>,
+pub struct VulkanoGraphics<S>
+where
+    S: ClockworkState,
+{
+    layers: Vec<Box<dyn VulkanoLayer<S>>>,
+    state: Option<GraphicsState>,
 }
 
-impl<S> Mechanism<S, Event> for VulkanoGraphics
+impl<S> Mechanism<S, Event> for VulkanoGraphics<S>
 where
     S: Substate<IOState>,
 {
@@ -61,7 +67,7 @@ where
                 Event::Draw(_),
                 Self {
                     state:
-                        Some(LocalState {
+                        Some(GraphicsState {
                             dynamic_state,
                             swapchain,
                             surface,
@@ -349,7 +355,7 @@ where
                 /* ---- WRITING INTERNAL STATE ---- */
                 *vulkano_graphics = Self {
                     layers: vec![],
-                    state: Some(LocalState {
+                    state: Some(GraphicsState {
                         dynamic_state,
                         swapchain,
                         surface,
