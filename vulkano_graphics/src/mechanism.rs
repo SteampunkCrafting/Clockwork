@@ -1,6 +1,4 @@
-use crate::{
-    graphics_state::GraphicsState, triangle_layer::TriangleLayer, vulkano_layer::VulkanoLayer,
-};
+use crate::{graphics_state::GraphicsState, vulkano_layer::VulkanoLayer};
 use clockwork_core::{
     clockwork::{ClockworkState, Substate},
     prelude::Mechanism,
@@ -44,6 +42,47 @@ where
     layers: Vec<Box<dyn VulkanoLayer<S>>>,
     graphics_state: Option<GraphicsState>,
     mechanism_state: Option<PrivateState>,
+}
+
+impl<S> VulkanoGraphics<S>
+where
+    S: ClockworkState,
+{
+    pub fn builder() -> VulkanoGraphicsBuilder<S> {
+        Default::default()
+    }
+}
+
+pub struct VulkanoGraphicsBuilder<S>(Vec<Box<dyn VulkanoLayer<S>>>)
+where
+    S: ClockworkState;
+
+impl<S> VulkanoGraphicsBuilder<S>
+where
+    S: ClockworkState,
+{
+    pub fn with_layer(mut self, layer: impl VulkanoLayer<S> + 'static) -> Self {
+        self.0.push(Box::new(layer));
+        self
+    }
+
+    pub fn build(self) -> VulkanoGraphics<S> {
+        let Self(layers) = self;
+        VulkanoGraphics {
+            layers,
+            graphics_state: None,
+            mechanism_state: None,
+        }
+    }
+}
+
+impl<S> Default for VulkanoGraphicsBuilder<S>
+where
+    S: ClockworkState,
+{
+    fn default() -> Self {
+        VulkanoGraphicsBuilder(Default::default())
+    }
 }
 
 impl<S> Mechanism<S, Event> for VulkanoGraphics<S>
@@ -297,19 +336,6 @@ where
 
     fn handled_events(&self) -> Option<&'static [Event]> {
         Some(&[Event::Initialization, Event::Draw(Duration::ZERO)])
-    }
-}
-
-impl<S> Default for VulkanoGraphics<S>
-where
-    S: ClockworkState,
-{
-    fn default() -> Self {
-        Self {
-            layers: vec![Box::new(TriangleLayer::default())],
-            graphics_state: None,
-            mechanism_state: None,
-        }
     }
 }
 

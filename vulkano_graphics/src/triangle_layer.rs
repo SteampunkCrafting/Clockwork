@@ -16,6 +16,7 @@ struct PrivateState {
     pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
 }
 
+#[deprecated]
 pub struct TriangleLayer(Option<PrivateState>);
 
 impl<S> VulkanoLayer<S> for TriangleLayer
