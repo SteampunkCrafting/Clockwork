@@ -1,4 +1,4 @@
-use crate::mechanism::GraphicsState;
+use crate::graphics_state::GraphicsState;
 use clockwork_core::clockwork::ClockworkState;
 use vulkano::command_buffer::AutoCommandBufferBuilder;
 

@@ -1,3 +1,4 @@
+use crate::{graphics_state::GraphicsState, vulkano_layer::VulkanoLayer};
 use clockwork_core::{
     clockwork::{ClockworkState, Substate},
     prelude::Mechanism,
@@ -11,7 +12,7 @@ use std::sync::Arc;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
     command_buffer::{AutoCommandBufferBuilder, DynamicState},
-    device::{Device, DeviceExtensions, Queue},
+    device::{Device, DeviceExtensions},
     framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract, Subpass},
     image::{ImageUsage, SwapchainImage},
     impl_vertex,
@@ -22,28 +23,13 @@ use vulkano::{
     },
     single_pass_renderpass,
     swapchain::{
-        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, Surface,
-        SurfaceTransform, Swapchain, SwapchainCreationError,
+        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform,
+        Swapchain, SwapchainCreationError,
     },
     sync::{self, FlushError, GpuFuture},
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::window::WindowBuilder;
-
-use crate::vulkano_layer::VulkanoLayer;
-
-pub struct GraphicsState {
-    dynamic_state: DynamicState,
-    swapchain: Arc<Swapchain<Window>>,
-    surface: Arc<Surface<Window>>,
-    previous_frame_end: Option<Box<dyn GpuFuture>>,
-    recreate_swapchain: bool,
-    framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
-    render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
-    device: Arc<Device>,
-    pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
-    queue: Arc<Queue>,
-}
 
 pub struct VulkanoGraphics<S>
 where
