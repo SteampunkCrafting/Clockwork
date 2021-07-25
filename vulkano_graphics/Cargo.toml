@@ -23,9 +23,9 @@ path = "../main_loop"
 package = "spc_clockwork_asset_storage"
 path = "../asset_storage"
 
-[dependencies.assets]
-package = "spc_clockwork_assets"
-path = "../assets"
+[dependencies.scene_utils]
+package = "spc_clockwork_scene_utils"
+path = "../scene_utils"
 
 [dependencies.legion_ecs]
 package = "spc_clockwork_legion_ecs"

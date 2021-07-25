@@ -1,0 +1,33 @@
+[package]
+name = "spc_clockwork_vulkano_layers"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+vulkano = "0.20.0"
+vulkano-shaders = "0.20.0"
+
+[dependencies.asset_storage]
+package = "spc_clockwork_asset_storage"
+path = "../asset_storage"
+
+[dependencies.clockwork_core]
+package = "spc_clockwork_core"
+path = "../core"
+
+[dependencies.legion_ecs]
+package = "spc_clockwork_legion_ecs"
+path = "../legion_ecs"
+
+[dependencies.physics]
+package = "spc_clockwork_rapier_physics_3d"
+path = "../rapier_physics_3d"
+
+[dependencies.graphics]
+package = "spc_clockwork_vulkano_graphics"
+path = "../vulkano_graphics"
+
+[dependencies.scene_utils]
+package = "spc_clockwork_scene_utils"
+path = "../scene_utils"

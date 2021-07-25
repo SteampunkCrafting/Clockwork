@@ -5,11 +5,8 @@ use getset::Getters;
 /// The structure is generic over vertex type T.
 #[derive(Getters)]
 pub struct Mesh<T> {
-    #[getset(get)]
-    indices: Vec<usize>,
-
-    #[getset(get)]
-    vertices: Vec<T>,
+    pub indices: Vec<usize>,
+    pub vertices: Vec<T>,
 }
 
 pub struct TriangleIterator<'a, T> {

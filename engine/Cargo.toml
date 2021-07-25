@@ -27,3 +27,15 @@ package = "spc_clockwork_rapier_physics_3d"
 [dependencies.graphics]
 path = "../vulkano_graphics"
 package = "spc_clockwork_vulkano_graphics"
+
+[dependencies.vulkano_layers]
+path = "../vulkano_layers"
+package = "spc_clockwork_vulkano_layers"
+
+[dependencies.scene]
+path = "../scene_utils"
+package = "spc_clockwork_scene_utils"
+
+[dependencies.asset_storage]
+path = "../asset_storage"
+package = "spc_clockwork_asset_storage"

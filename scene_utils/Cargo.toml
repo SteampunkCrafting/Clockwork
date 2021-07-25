@@ -1,0 +1,11 @@
+[package]
+name = "spc_clockwork_scene_utils"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+getset = "0.1.1"
+
+[dependencies.asset_storage]
+package = "spc_clockwork_asset_storage"
+path = "../asset_storage"

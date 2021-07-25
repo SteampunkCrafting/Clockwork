@@ -6,8 +6,9 @@ members = [
     "rapier_physics_3d",
     "engine",
     "asset_storage",
-    "assets",
+    "scene_utils",
     "vulkano_graphics",
+    "vulkano_layers",
 ]
 
 [profile.dev.package.rapier3d]

@@ -2,7 +2,7 @@ use clockwork_core::sync::{ReadLock, WriteLock};
 use spc_clockwork_asset_storage::prelude::*;
 use std::thread;
 
-#[derive(EnumIter, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq)]
 enum StorageKey {
     A,
     B,
