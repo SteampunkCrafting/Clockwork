@@ -3,6 +3,7 @@ pub use ecs;
 pub use graphics;
 pub use main_loop;
 pub use physics;
+pub use scene;
 pub use vulkano_layers;
 
 pub mod base_state;
