@@ -1,6 +1,6 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use asset_storage::prelude::AssetStorage;
-use clockwork_core::{clockwork::Substate, sync::ReadLock};
+use clockwork_core::{clockwork::Substate, prelude::Lock};
 use graphics::{
     graphics_state::GraphicsState,
     prelude::VulkanoLayer,
@@ -112,6 +112,7 @@ where
         } = graphics_state;
         let LegionState { world, resources } = state.substate();
         let meshes: &AssetStorage<I, ColoredMesh> = state.substate();
+        let physics: &RapierState3D = state.substate();
 
         match self {
             Self(pipeline @ None, ..) => {
@@ -136,7 +137,7 @@ where
             }
             Self(Some(pipeline), buffered_meshes) => {
                 // DRAWING
-                let bodies = resources.get::<ReadLock<RigidBodySet>>().unwrap();
+                let bodies = physics.user_locks().1;
                 let bodies = bodies.lock();
                 for (mesh_id, transform) in DrawableEntity::<I>::query()
                     .iter(world)
