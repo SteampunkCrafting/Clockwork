@@ -1,6 +1,6 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use asset_storage::prelude::AssetStorage;
-use clockwork_core::{clockwork::Substate, prelude::Lock};
+use clockwork_core::clockwork::Substate;
 use graphics::{
     graphics_state::GraphicsState,
     prelude::VulkanoLayer,
@@ -13,10 +13,7 @@ use graphics::{
     },
 };
 use legion_ecs::{prelude::*, state::LegionState};
-use physics::{
-    prelude::{RigidBodyHandle, RigidBodySet},
-    state::RapierState3D,
-};
+use physics::{prelude::RigidBodyHandle, state::RapierState3D};
 use scene_utils::{mesh::Mesh, mesh_vertex::ColoredVertex, prelude::ColoredMesh};
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
@@ -110,7 +107,7 @@ where
             render_pass,
             device,
         } = graphics_state;
-        let LegionState { world, resources } = state.substate();
+        let LegionState { world, .. } = state.substate();
         let meshes: &AssetStorage<I, ColoredMesh> = state.substate();
         let physics: &RapierState3D = state.substate();
 
