@@ -1,13 +1,13 @@
 use clockwork_core::sync::ReadLock;
 use std::{cell::RefCell, collections::HashMap, hash::Hash};
 
-pub trait AssetStorageKey: Clone + Hash + Eq + 'static {}
+pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
 
 pub struct AssetStorage<T, U>(Box<dyn Send + Fn(T) -> U>, RefCell<HashMap<T, ReadLock<U>>>)
 where
     T: AssetStorageKey;
 
-impl<T> AssetStorageKey for T where T: Clone + Hash + Eq + 'static {}
+impl<T> AssetStorageKey for T where T: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
 
 impl<T, U> AssetStorage<T, U>
 where
