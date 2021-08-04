@@ -1,6 +1,6 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use asset_storage::prelude::AssetStorage;
-use clockwork_core::clockwork::Substate;
+use clockwork_core::{clockwork::Substate, sync::ReadLock};
 use graphics::{
     graphics_state::GraphicsState,
     prelude::VulkanoLayer,
@@ -12,8 +12,11 @@ use graphics::{
         },
     },
 };
-use legion_ecs::state::LegionState;
-use physics::state::RapierState3D;
+use legion_ecs::{prelude::*, state::LegionState};
+use physics::{
+    prelude::{RigidBodyHandle, RigidBodySet},
+    state::RapierState3D,
+};
 use scene_utils::{mesh::Mesh, mesh_vertex::ColoredVertex, prelude::ColoredMesh};
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
@@ -21,6 +24,10 @@ use vulkano::{
     device::Device,
     impl_vertex,
 };
+
+pub struct DrawMarker;
+
+pub type DrawableEntity<MeshID> = (Read<DrawMarker>, Read<MeshID>, Read<RigidBodyHandle>);
 
 pub struct ColoredMeshDrawer<I>(
     Option<Arc<dyn GraphicsPipelineAbstract + Send + Sync>>,
@@ -43,7 +50,7 @@ struct InstanceData {
 
 struct BufferedMesh {
     vertices: Arc<CpuAccessibleBuffer<[Vertex]>>,
-    indices: Arc<CpuAccessibleBuffer<[usize]>>,
+    indices: Arc<CpuAccessibleBuffer<[u32]>>,
 }
 
 mod vs {
@@ -103,8 +110,8 @@ where
             render_pass,
             device,
         } = graphics_state;
-        let physics = Substate::<RapierState3D>::substate(state);
-        let ecs = Substate::<LegionState>::substate(state);
+        let LegionState { world, resources } = state.substate();
+        let meshes: &AssetStorage<I, ColoredMesh> = state.substate();
 
         match self {
             Self(pipeline @ None, ..) => {
@@ -127,9 +134,40 @@ where
                         .unwrap(),
                 ));
             }
-            Self(Some(pipeline), meshes) => {
+            Self(Some(pipeline), buffered_meshes) => {
                 // DRAWING
-                todo!()
+                let bodies = resources.get::<ReadLock<RigidBodySet>>().unwrap();
+                let bodies = bodies.lock();
+                for (mesh_id, transform) in DrawableEntity::<I>::query()
+                    .iter(world)
+                    .map(|(_, e, b)| (e, bodies.get(b.clone()).unwrap().position().clone()))
+                    .map(|(e, i)| (e, i.to_matrix()))
+                    .map(|(e, i)| (e, Into::<[[f32; 4]; 4]>::into(i)))
+                {
+                    let BufferedMesh { vertices, indices } =
+                        buffered_meshes.entry(mesh_id.clone()).or_insert_with(|| {
+                            (device.clone(), &*meshes.get(mesh_id.clone()).lock()).into()
+                        });
+                    command_buffer
+                        .draw_indexed(
+                            pipeline.clone(),
+                            dynamic_state,
+                            vec![
+                                vertices.clone(),
+                                CpuAccessibleBuffer::from_iter(
+                                    device.clone(),
+                                    BufferUsage::all(),
+                                    false,
+                                    vec![transform].into_iter(),
+                                )
+                                .unwrap(),
+                            ],
+                            indices.clone(),
+                            (),
+                            (),
+                        )
+                        .unwrap();
+                }
             }
         }
     }
@@ -184,7 +222,7 @@ impl From<(Arc<Device>, &ColoredMesh)> for BufferedMesh {
                 dev,
                 BufferUsage::all(),
                 false,
-                indices.iter().cloned(),
+                indices.iter().cloned().map(|i| i as u32),
             )
             .unwrap(),
         }
