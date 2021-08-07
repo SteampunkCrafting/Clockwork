@@ -13,7 +13,10 @@ use graphics::{
     },
 };
 use legion_ecs::{prelude::*, state::LegionState};
-use physics::{prelude::RigidBodyHandle, state::RapierState3D};
+use physics::{
+    prelude::{nalgebra::Perspective3, RigidBodyHandle},
+    state::RapierState3D,
+};
 use scene_utils::{mesh::Mesh, mesh_vertex::ColoredVertex, prelude::ColoredMesh};
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
@@ -23,7 +26,9 @@ use vulkano::{
 };
 
 pub struct DrawMarker;
+pub struct Camera(pub Perspective3<f32>);
 
+pub type CameraEntity = (Read<Camera>, Read<RigidBodyHandle>);
 pub type DrawableEntity<MeshID> = (Read<DrawMarker>, Read<MeshID>, Read<RigidBodyHandle>);
 
 pub struct ColoredMeshDrawer<I>(
@@ -68,7 +73,7 @@ layout (location = 3) in mat4 transformation;
 layout (location = 0) out vec4 vert_color;
 
 void main() {
-    gl_Position = vec4(position, 1.0);
+    gl_Position = transformation * vec4(position, 1.0);
     vert_color = color;
 }
         "
@@ -111,8 +116,8 @@ where
         let meshes: &AssetStorage<I, ColoredMesh> = state.substate();
         let physics: &RapierState3D = state.substate();
 
-        match self {
-            Self(pipeline @ None, ..) => {
+        match (self, CameraEntity::query().iter(world).next()) {
+            (Self(pipeline @ None, ..), _) => {
                 // INITIALIZATION
                 *pipeline = Some(Arc::new(
                     GraphicsPipeline::start()
@@ -132,16 +137,29 @@ where
                         .unwrap(),
                 ));
             }
-            Self(Some(pipeline), buffered_meshes) => {
+            (Self(Some(pipeline), buffered_meshes), _) => {
                 // DRAWING
+
+                /* ---- ACQUIRING BODY SET ---- */
                 let bodies = physics.user_locks().1;
                 let bodies = bodies.lock();
-                for (mesh_id, transform) in DrawableEntity::<I>::query()
-                    .iter(world)
-                    .map(|(_, e, b)| (e, bodies.get(b.clone()).unwrap().position().clone()))
-                    .map(|(e, i)| (e, i.to_matrix()))
-                    .map(|(e, i)| (e, Into::<[[f32; 4]; 4]>::into(i)))
-                {
+
+                /* ---- GETTING CAMERA ENTITY ---- */
+
+                /* ---- GETTING DRAWABLES ---- */
+                let instanced_data = {
+                    let mut instances: HashMap<I, Vec<[[f32; 4]; 4]>> = Default::default();
+                    DrawableEntity::<I>::query()
+                        .iter(world)
+                        .map(|(_, e, b)| (e.clone(), bodies.get(b.clone()).unwrap().position()))
+                        .map(|(e, i)| (e, i.to_matrix()))
+                        .map(|(e, i)| (e, Into::<[[f32; 4]; 4]>::into(i)))
+                        .for_each(|(e, i)| instances.entry(e).or_default().push(i));
+                    instances
+                };
+
+                /* ---- RENDERING ---- */
+                for (mesh_id, instances) in instanced_data {
                     let BufferedMesh { vertices, indices } =
                         buffered_meshes.entry(mesh_id.clone()).or_insert_with(|| {
                             (device.clone(), &*meshes.get(mesh_id.clone()).lock()).into()
@@ -156,7 +174,7 @@ where
                                     device.clone(),
                                     BufferUsage::all(),
                                     false,
-                                    vec![transform].into_iter(),
+                                    instances.into_iter(),
                                 )
                                 .unwrap(),
                             ],
@@ -167,6 +185,7 @@ where
                         .unwrap();
                 }
             }
+            (_, None) => (),
         }
     }
 }
