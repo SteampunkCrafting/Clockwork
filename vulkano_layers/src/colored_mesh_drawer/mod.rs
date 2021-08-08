@@ -30,7 +30,10 @@ mod vertex;
 mod vertex_shader;
 
 pub struct ColoredMeshDrawer<I>(
-    Option<Arc<dyn GraphicsPipelineAbstract + Send + Sync>>,
+    Option<(
+        Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+        CpuBufferPool<vertex_shader::ty::Data>,
+    )>,
     HashMap<I, BufferedMesh>,
 )
 where
@@ -57,31 +60,39 @@ where
         let physics: &RapierState3D = state.substate();
 
         match (self, CameraEntity::query().iter(world).next()) {
-            (Self(pipeline @ None, ..), _) => {
+            (Self(inner_state @ None, ..), _) => {
                 // INITIALIZATION
-                *pipeline = Some(Arc::new(
-                    GraphicsPipeline::start()
-                        .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
-                        .vertex_shader(
-                            vertex_shader::Shader::load(device.clone())
-                                .unwrap()
-                                .main_entry_point(),
-                            (),
-                        )
-                        .triangle_list()
-                        .viewports_dynamic_scissors_irrelevant(1)
-                        .fragment_shader(
-                            fragment_shader::Shader::load(device.clone())
-                                .unwrap()
-                                .main_entry_point(),
-                            (),
-                        )
-                        .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
-                        .build(device.clone())
-                        .unwrap(),
+                *inner_state = Some((
+                    Arc::new(
+                        GraphicsPipeline::start()
+                            .vertex_input(
+                                OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new(),
+                            )
+                            .vertex_shader(
+                                vertex_shader::Shader::load(device.clone())
+                                    .unwrap()
+                                    .main_entry_point(),
+                                (),
+                            )
+                            .triangle_list()
+                            .viewports_dynamic_scissors_irrelevant(1)
+                            .fragment_shader(
+                                fragment_shader::Shader::load(device.clone())
+                                    .unwrap()
+                                    .main_entry_point(),
+                                (),
+                            )
+                            .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+                            .build(device.clone())
+                            .unwrap(),
+                    ),
+                    CpuBufferPool::new(device.clone(), BufferUsage::all()),
                 ));
             }
-            (Self(Some(pipeline), buffered_meshes), Some((camera, camera_body))) => {
+            (
+                Self(Some((pipeline, uniform_buffer)), buffered_meshes),
+                Some((camera, camera_body)),
+            ) => {
                 // DRAWING
 
                 /* ---- ACQUIRING BODY SET ---- */
@@ -111,10 +122,6 @@ where
                 };
 
                 /* ---- RENDERING ---- */
-                let uniform_buffer = CpuBufferPool::<vertex_shader::ty::Data>::new(
-                    device.clone(),
-                    BufferUsage::all(),
-                );
                 let set = Arc::new(
                     PersistentDescriptorSet::start(
                         pipeline.descriptor_set_layout(0).unwrap().clone(),
