@@ -17,7 +17,10 @@ use physics::state::RapierState3D;
 use scene_utils::prelude::ColoredMesh;
 use std::{collections::HashMap, sync::Arc};
 pub use util::*;
-use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+use vulkano::{
+    buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool},
+    descriptor::descriptor_set::PersistentDescriptorSet,
+};
 
 mod buffered_mesh;
 mod fragment_shader;
@@ -78,7 +81,7 @@ where
                         .unwrap(),
                 ));
             }
-            (Self(Some(pipeline), buffered_meshes), _) => {
+            (Self(Some(pipeline), buffered_meshes), Some((camera, camera_body))) => {
                 // DRAWING
 
                 /* ---- ACQUIRING BODY SET ---- */
@@ -86,7 +89,14 @@ where
                 let bodies = bodies.lock();
 
                 /* ---- GETTING CAMERA ENTITY ---- */
-                todo!("GETTING CAMERA ENTITY");
+                let projection_matrix: [[f32; 4]; 4] = camera.0.as_matrix().clone().into();
+                let view_matrix: [[f32; 4]; 4] = bodies
+                    .get(camera_body.clone())
+                    .unwrap()
+                    .position()
+                    .inverse()
+                    .to_matrix()
+                    .into();
 
                 /* ---- GETTING DRAWABLES ---- */
                 let instanced_data = {
@@ -101,6 +111,27 @@ where
                 };
 
                 /* ---- RENDERING ---- */
+                let uniform_buffer = CpuBufferPool::<vertex_shader::ty::Data>::new(
+                    device.clone(),
+                    BufferUsage::all(),
+                );
+                let set = Arc::new(
+                    PersistentDescriptorSet::start(
+                        pipeline.descriptor_set_layout(0).unwrap().clone(),
+                    )
+                    .add_buffer(
+                        uniform_buffer
+                            .next(vertex_shader::ty::Data {
+                                projection: projection_matrix,
+                                view: view_matrix,
+                            })
+                            .unwrap(),
+                    )
+                    .unwrap()
+                    .build()
+                    .unwrap(),
+                );
+
                 for (mesh_id, instances) in instanced_data {
                     let BufferedMesh { vertices, indices } =
                         buffered_meshes.entry(mesh_id.clone()).or_insert_with(|| {
@@ -121,7 +152,7 @@ where
                                 .unwrap(),
                             ],
                             indices.clone(),
-                            (),
+                            set.clone(),
                             (),
                         )
                         .unwrap();
