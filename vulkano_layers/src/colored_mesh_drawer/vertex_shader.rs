@@ -26,6 +26,7 @@ layout (location = 0) out vec4 vert_color;
 void main() {
     mat4 world_view = uniforms.view * world;
     gl_Position = uniforms.projection * world_view * vec4(position, 1.0);
+    gl_Position.y = -gl_Position.y; 
     vert_color = color;
 }
         "
