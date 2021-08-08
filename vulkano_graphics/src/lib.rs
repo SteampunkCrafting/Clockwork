@@ -1,6 +1,5 @@
 pub mod graphics_state;
 pub mod mechanism;
-pub mod triangle_layer;
 pub mod vulkano_layer;
 
 pub use vulkano;
