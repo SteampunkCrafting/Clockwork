@@ -1,9 +1,9 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use clockwork_core::clockwork::Substate;
+use clockwork_core::clockwork::{CallbackSubstate, Substate};
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use main_loop::prelude::IOState;
-use physics::prelude::RapierState3D;
+use physics::state::PhysicsState;
 use scene::prelude::ColoredMeshStorage;
 
 #[derive(Builder)]
@@ -22,13 +22,7 @@ where
     C: AssetStorageKey,
 {
     #[builder(setter(skip))]
-    physics: RapierState3D,
-
-    #[builder(setter(skip))]
     ecs: LegionState,
-
-    #[builder(setter(skip), default = "IOState::builder().build().unwrap()")]
-    io: IOState,
 
     assets: Assets<C>,
 }
@@ -59,42 +53,64 @@ where
         /* ---- ALLOCATING MEMORY ---- */
         let Self { assets, .. } = self;
         let mut base_state = BaseState {
-            physics: RapierState3D::default(),
             ecs: LegionState::default(),
-            io: IOState::builder().build().unwrap(),
             assets: assets.ok_or("Missing assets")?,
         };
-
-        /* ---- CONNECTING PHYSICS TO ECS ---- */
-        let (g, b, c, j, i, bp, np, ccd) = base_state.physics.user_locks();
         let BaseState {
-            ecs: LegionState { resources: res, .. },
+            ecs: LegionState { resources, .. },
             ..
         } = &mut base_state;
-        res.insert(g);
-        res.insert(b);
-        res.insert(c);
-        res.insert(j);
-        res.insert(i);
-        res.insert(bp);
-        res.insert(np);
-        res.insert(ccd);
+
+        /* ---- INITIALIZING PHYSICS ---- */
+        resources.insert(PhysicsState::default());
+
+        /* ---- INITIALIZING IO ---- */
+        resources.insert(IOState::default());
 
         /* ---- RETURNING ---- */
         Ok(base_state)
     }
 }
 
-impl<C> Substate<RapierState3D> for BaseState<C>
+impl<C> CallbackSubstate<PhysicsState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &RapierState3D {
-        &self.physics
+    fn callback_substate(&self, callback: impl FnOnce(&PhysicsState)) {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&resources.get().unwrap());
     }
 
-    fn substate_mut(&mut self) -> &mut RapierState3D {
-        &mut self.physics
+    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut PhysicsState)) {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&mut resources.get_mut().unwrap());
+    }
+}
+
+impl<C> CallbackSubstate<IOState> for BaseState<C>
+where
+    C: AssetStorageKey,
+{
+    fn callback_substate(&self, callback: impl FnOnce(&IOState)) {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = &self;
+        callback(&resources.get().unwrap());
+    }
+
+    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut IOState)) {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&mut resources.get_mut().unwrap())
     }
 }
 
@@ -108,19 +124,6 @@ where
 
     fn substate_mut(&mut self) -> &mut LegionState {
         &mut self.ecs
-    }
-}
-
-impl<C> Substate<IOState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &IOState {
-        &self.io
-    }
-
-    fn substate_mut(&mut self) -> &mut IOState {
-        &mut self.io
     }
 }
 

@@ -1,5 +1,3 @@
-use clockwork_core::{prelude::Lock, sync::WriteLock};
-
 use rapier3d::{
     dynamics::{CCDSolver, JointSet, RigidBodySet},
     geometry::{BroadPhase, ColliderSet, NarrowPhase},
@@ -10,15 +8,15 @@ use rapier3d::{
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Gravity(pub Vector<f32>);
 
-pub struct RapierState3D {
-    pub(crate) gravity: WriteLock<Gravity>,
-    pub(crate) bodies: WriteLock<RigidBodySet>,
-    pub(crate) colliders: WriteLock<ColliderSet>,
-    pub(crate) joints: WriteLock<JointSet>,
-    pub(crate) islands: WriteLock<IslandManager>,
-    pub(crate) broad_phase: WriteLock<BroadPhase>,
-    pub(crate) narrow_phase: WriteLock<NarrowPhase>,
-    pub(crate) ccd_solver: WriteLock<CCDSolver>,
+pub struct PhysicsState {
+    pub gravity: Gravity,
+    pub bodies: RigidBodySet,
+    pub colliders: ColliderSet,
+    pub joints: JointSet,
+    pub islands: IslandManager,
+    pub broad_phase: BroadPhase,
+    pub narrow_phase: NarrowPhase,
+    pub ccd_solver: CCDSolver,
 }
 
 impl<T> From<T> for Gravity
@@ -30,46 +28,9 @@ where
     }
 }
 
-impl RapierState3D {
-    pub fn user_locks(
-        &self,
-    ) -> (
-        Lock<Gravity>,
-        Lock<RigidBodySet>,
-        Lock<ColliderSet>,
-        Lock<JointSet>,
-        Lock<IslandManager>,
-        Lock<BroadPhase>,
-        Lock<NarrowPhase>,
-        Lock<CCDSolver>,
-    ) {
-        let Self {
-            gravity,
-            bodies,
-            colliders,
-            joints,
-            islands,
-            broad_phase,
-            narrow_phase,
-            ccd_solver,
-        } = self;
-
-        (
-            gravity.downgrade_to_user_lock(),
-            bodies.downgrade_to_user_lock(),
-            colliders.downgrade_to_user_lock(),
-            joints.downgrade_to_user_lock(),
-            islands.downgrade_to_user_lock(),
-            broad_phase.downgrade_to_user_lock(),
-            narrow_phase.downgrade_to_user_lock(),
-            ccd_solver.downgrade_to_user_lock(),
-        )
-    }
-}
-
-impl Default for RapierState3D {
+impl Default for PhysicsState {
     fn default() -> Self {
-        RapierState3D {
+        PhysicsState {
             gravity: Gravity::default().into(),
             bodies: RigidBodySet::new().into(),
             colliders: ColliderSet::new().into(),

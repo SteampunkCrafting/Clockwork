@@ -1,7 +1,8 @@
 use crate::event::Event;
 use derive_builder::Builder;
 use getset::Getters;
-use std::*;
+use std::{collections::HashSet, time};
+use winit::event::VirtualKeyCode;
 use winit::event_loop::EventLoop;
 
 #[derive(Getters, Builder)]
@@ -51,6 +52,16 @@ impl IOStateBuilder {
     /// Sets desired max frames per second rate
     pub fn with_desired_max_fps(self, fps: impl Into<f32>) -> Self {
         self.with_desired_min_draw_period(time::Duration::from_secs_f32(1f32 / fps.into()))
+    }
+}
+
+impl Default for IOState {
+    fn default() -> Self {
+        Self::builder()
+            .with_desired_max_fps(90f32)
+            .with_desired_tps(60f32)
+            .build()
+            .unwrap()
     }
 }
 

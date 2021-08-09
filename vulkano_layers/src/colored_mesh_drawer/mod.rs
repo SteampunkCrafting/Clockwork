@@ -13,7 +13,7 @@ use graphics::{
     },
 };
 use legion_ecs::{prelude::*, state::LegionState};
-use physics::state::RapierState3D;
+use physics::state::PhysicsState;
 use scene_utils::prelude::ColoredMesh;
 use std::{collections::HashMap, sync::Arc};
 pub use util::*;
@@ -41,7 +41,7 @@ where
 
 impl<S, I> VulkanoLayer<S> for ColoredMeshDrawer<I>
 where
-    S: CallbackSubstate<RapierState3D>
+    S: CallbackSubstate<PhysicsState>
         + CallbackSubstate<LegionState>
         + CallbackSubstate<AssetStorage<I, ColoredMesh>>,
     I: AssetStorageKey,
@@ -59,7 +59,7 @@ where
         } = graphics_state;
         state.callback_substate(|LegionState { world, .. }| {
             state.callback_substate(|meshes: &AssetStorage<I, ColoredMesh>| {
-                state.callback_substate(|physics: &RapierState3D| {
+                state.callback_substate(|physics: &PhysicsState| {
                     match (self, CameraEntity::query().iter(world).next()) {
                         (Self(inner_state @ None, ..), _) => {
                             // INITIALIZATION
@@ -99,8 +99,7 @@ where
                             // DRAWING
 
                             /* ---- ACQUIRING BODY SET ---- */
-                            let bodies = physics.user_locks().1;
-                            let bodies = bodies.lock();
+                            let bodies = &physics.bodies;
 
                             /* ---- GETTING CAMERA ENTITY ---- */
                             let projection_matrix: [[f32; 4]; 4] =
