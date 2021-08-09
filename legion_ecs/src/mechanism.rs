@@ -10,7 +10,7 @@ where
     E: ClockworkEvent;
 impl<S, E> Mechanism<S, E> for LegionSystems<E>
 where
-    S: Substate<LegionState>,
+    S: CallbackSubstate<LegionState>,
     E: ClockworkEvent,
 {
     fn name(&self) -> &'static str {
@@ -18,12 +18,12 @@ where
     }
 
     fn clink(&mut self, state: &mut S, event: E) {
-        let LegionState {
-            world, resources, ..
-        } = state.substate_mut();
-        if let Some(schedule) = self.0.get_mut(&event) {
-            schedule.execute(world, resources)
-        }
+        state.callback_substate_mut(|LegionState { world, resources }| {
+            match self.0.get_mut(&event) {
+                Some(schedule) => schedule.execute(world, resources),
+                None => (),
+            }
+        });
     }
 }
 impl<E> LegionSystems<E>

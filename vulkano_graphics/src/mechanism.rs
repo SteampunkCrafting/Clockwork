@@ -1,6 +1,6 @@
 use crate::{graphics_state::GraphicsState, vulkano_layer::VulkanoLayer};
 use clockwork_core::{
-    clockwork::{ClockworkState, Substate},
+    clockwork::{CallbackSubstate, ClockworkState},
     prelude::Mechanism,
 };
 use log::*;
@@ -87,7 +87,7 @@ where
 
 impl<S> Mechanism<S, Event> for VulkanoGraphics<S>
 where
-    S: Substate<IOState>,
+    S: CallbackSubstate<IOState>,
 {
     fn name(&self) -> &'static str {
         "Vulkano Graphics"
@@ -197,12 +197,6 @@ where
                 info!("Initializing Vulkano Graphics");
 
                 /* ---- INSTANCE, SURFACE, GPU ---- */
-                trace!("Getting Winit Event Loop from shared state");
-                let event_loop = Substate::<IOState>::substate(state)
-                    .event_loop
-                    .as_deref()
-                    .expect("Missing event loop during initialization");
-
                 trace!("Creating Vulkan Instance");
                 let instance = Instance::new(
                     None,
@@ -210,10 +204,23 @@ where
                     None,
                 ).expect("Failed to create Vulkan instance\nCheck if Vulkan runtime is installed, and, if not, install it from https://vulkan.lunarg.com/sdk/home");
 
-                trace!("Instantiating window and surface");
-                let surface = WindowBuilder::new()
-                    .build_vk_surface(event_loop, instance.clone())
-                    .expect("Failed to build surface");
+                let surface = {
+                    let mut surface = None;
+                    state.callback_substate_mut(|IOState { event_loop, .. }| {
+                        trace!("Getting Winit Event Loop from shared state");
+                        let event_loop = event_loop
+                            .as_deref()
+                            .expect("Missing event loop during initialization");
+
+                        trace!("Instantiating window and surface");
+                        surface = Some(
+                            WindowBuilder::new()
+                                .build_vk_surface(event_loop, instance.clone())
+                                .expect("Failed to build surface"),
+                        );
+                    });
+                    surface.unwrap()
+                };
 
                 trace!("Getting physical device");
                 debug!(

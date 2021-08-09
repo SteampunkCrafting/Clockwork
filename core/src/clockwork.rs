@@ -98,7 +98,7 @@ impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debu
 /// Note: this chaining of states may produce a lot of unnecessary code due
 /// to lots of trait delegations. In the future, this should be overcome by
 /// providing macros.
-pub trait Substate<S>: ClockworkState
+pub trait Substate<S>: CallbackSubstate<S> + ClockworkState
 where
     S: ClockworkState,
 {
@@ -117,6 +117,37 @@ where
 
     fn substate_mut(&mut self) -> &mut S {
         self
+    }
+}
+
+/// A substate of a clockwork state, accessible via callback.
+///
+/// This is a more general type trait, which should be requested by
+/// mechanisms.
+pub trait CallbackSubstate<S>: ClockworkState
+where
+    S: ClockworkState,
+{
+    /// Executes provided callback, supplying its substate reference
+    fn callback_substate(&self, callback: impl FnOnce(&S));
+    /// Executes provided callback, supplying its mutable substate reference
+    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut S));
+}
+
+/// Having substate always implies a possibility
+/// to execute a callback on this substate.
+/// This is not always true the other way.
+impl<T, S> CallbackSubstate<S> for T
+where
+    T: Substate<S>,
+    S: ClockworkState,
+{
+    fn callback_substate(&self, callback: impl FnOnce(&S)) {
+        callback(self.substate())
+    }
+
+    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut S)) {
+        callback(self.substate_mut())
     }
 }
 

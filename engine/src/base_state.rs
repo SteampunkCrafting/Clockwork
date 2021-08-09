@@ -1,5 +1,5 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use clockwork_core::prelude::Substate;
+use clockwork_core::clockwork::Substate;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use main_loop::prelude::IOState;
