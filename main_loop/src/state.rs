@@ -66,7 +66,9 @@ impl Default for IOState {
 }
 
 #[derive(Default, Clone)]
-pub struct Input {}
+pub struct Input {
+    pub pressed_keys: HashSet<VirtualKeyCode>,
+}
 
 /// Main loop statistics
 #[derive(Getters, Clone)]
