@@ -100,7 +100,7 @@ impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debu
 /// providing macros.
 pub trait Substate<S>: CallbackSubstate<S> + ClockworkState
 where
-    S: ClockworkState,
+    S: ClockworkState + ?Sized,
 {
     /// Gets an immutable reference to the substate
     fn substate(&self) -> &S;
@@ -126,7 +126,7 @@ where
 /// mechanisms.
 pub trait CallbackSubstate<S>: ClockworkState
 where
-    S: ClockworkState,
+    S: ClockworkState + ?Sized,
 {
     /// Executes provided callback, supplying its substate reference
     fn callback_substate(&self, callback: impl FnOnce(&S));
@@ -140,7 +140,7 @@ where
 impl<T, S> CallbackSubstate<S> for T
 where
     T: Substate<S>,
-    S: ClockworkState,
+    S: ClockworkState + ?Sized,
 {
     fn callback_substate(&self, callback: impl FnOnce(&S)) {
         callback(self.substate())
