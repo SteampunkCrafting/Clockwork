@@ -69,6 +69,10 @@ where
                 info!("Finished terminating mechanisms");
             }
             WinitEvent::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
+            } => *cf = ControlFlow::Exit,
+            WinitEvent::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
                         input:
