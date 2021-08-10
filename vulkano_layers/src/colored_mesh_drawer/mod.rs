@@ -102,8 +102,7 @@ where
                             let bodies = &physics.bodies;
 
                             /* ---- GETTING CAMERA ENTITY ---- */
-                            let projection_matrix: [[f32; 4]; 4] =
-                                camera.0.as_matrix().clone().into();
+                            let projection_matrix: [[f32; 4]; 4] = camera.clone().into();
                             let view_matrix: [[f32; 4]; 4] = bodies
                                 .get(camera_body.clone())
                                 .unwrap()
