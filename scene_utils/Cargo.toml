@@ -9,3 +9,7 @@ getset = "0.1.1"
 [dependencies.asset_storage]
 package = "spc_clockwork_asset_storage"
 path = "../asset_storage"
+
+[dependencies.physics]
+package = "spc_clockwork_rapier_physics_3d"
+path = "../rapier_physics_3d"
