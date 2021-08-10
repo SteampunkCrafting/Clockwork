@@ -1,7 +1,7 @@
 #ifndef LIGHT_GLSL
 #define LIGHT_GLSL
-#include <phong_material.glsl>
-#include <vertex.glsl>
+#include "phong_material.glsl"
+#include "vertex.glsl"
 
 /* ---- STRUCTS ---- */
 

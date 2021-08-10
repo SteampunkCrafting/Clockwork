@@ -30,13 +30,13 @@ mod vertex;
 mod vertex_shader {
     vulkano_shaders::shader! {
         ty: "vertex",
-        path: "src/colored_mesh_drawer/vertex.glsl"
+        path: "glsl/colored_mesh_drawer.vs"
     }
 }
 mod fragment_shader {
     vulkano_shaders::shader! {
         ty: "fragment",
-        path: "src/colored_mesh_drawer/fragment.glsl"
+        path: "glsl/colored_mesh_drawer.fs"
     }
 }
 
