@@ -23,11 +23,22 @@ use vulkano::{
 };
 
 mod buffered_mesh;
-mod fragment_shader;
 mod instance_data;
 mod util;
 mod vertex;
-mod vertex_shader;
+
+mod vertex_shader {
+    vulkano_shaders::shader! {
+        ty: "vertex",
+        path: "src/colored_mesh_drawer/vertex.glsl"
+    }
+}
+mod fragment_shader {
+    vulkano_shaders::shader! {
+        ty: "fragment",
+        path: "src/colored_mesh_drawer/fragment.glsl"
+    }
+}
 
 pub struct ColoredMeshDrawer<I>(
     Option<(
