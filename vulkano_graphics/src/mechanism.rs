@@ -6,7 +6,7 @@ use clockwork_core::{
 use log::*;
 use main_loop::{
     prelude::{Event, Window},
-    state::IOState,
+    state::MainLoopState,
 };
 use std::{sync::Arc, time::Duration};
 use vulkano::{
@@ -87,7 +87,7 @@ where
 
 impl<S> Mechanism<S, Event> for VulkanoGraphics<S>
 where
-    S: CallbackSubstate<IOState>,
+    S: CallbackSubstate<MainLoopState>,
 {
     fn name(&self) -> &'static str {
         "Vulkano Graphics"
@@ -206,7 +206,7 @@ where
 
                 let surface = {
                     let mut surface = None;
-                    state.callback_substate_mut(|IOState { event_loop, .. }| {
+                    state.callback_substate_mut(|MainLoopState(event_loop)| {
                         trace!("Getting Winit Event Loop from shared state");
                         let event_loop = event_loop
                             .as_deref()

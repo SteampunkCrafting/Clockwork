@@ -21,12 +21,17 @@ pub struct IOState {
 
     /// Runtime statistics
     pub statistics: Statistics,
-
-    /// Winit event loop.
-    /// This field is `Some` (and hence the event loop is available to mechanisms)
-    /// only at the initialization stage.
-    pub event_loop: Option<EventLoop<Event>>,
 }
+
+/// Container for Winit event loop.
+///
+/// Required for the initialization of mechanisms, whose functionality depends
+/// on the window system.
+/// Controlled by the main_loop of this crate,
+/// the content of this struct is `Some` only at the initialization stage.
+#[derive(Default)]
+pub struct MainLoopState(pub Option<EventLoop<Event>>);
+
 impl IOState {
     /// Creates new builder of the IOState
     pub fn builder() -> IOStateBuilder {
@@ -43,6 +48,7 @@ impl IOState {
         self.desired_min_draw_period = std::time::Duration::from_secs_f32(1f32 / fps.into());
     }
 }
+
 impl IOStateBuilder {
     /// Sets desired average ticks per second rate
     pub fn with_desired_tps(self, fps: impl Into<f32>) -> Self {

@@ -4,14 +4,14 @@ use clockwork_core::prelude::*;
 use log::*;
 use std::*;
 use winit::{
-    event::Event::{LoopDestroyed, MainEventsCleared, UserEvent},
+    event::{Event as WinitEvent, KeyboardInput, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
 
 /// A winit-based main loop
 pub fn main_loop<S>(mut state: S, mut mechanisms: Mechanisms<S, Event>)
 where
-    S: CallbackSubstate<IOState>,
+    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState>,
 {
     /* ---- INITIALIZATION ---- */
     info!("Initializing main loop");
@@ -20,8 +20,7 @@ where
 
     /* -- ADDING EVENT LOOP OBJECT TO THE STATE -- */
     info!("Adding winit event loop to the engine state");
-    // CallbackSubstate::<IOState>::callback_substate_mut(&mut state).event_loop = Some(event_loop);
-    state.callback_substate_mut(|IOState { event_loop: el, .. }| *el = Some(event_loop));
+    state.callback_substate_mut(|MainLoopState(el)| *el = Some(event_loop));
     info!("Done adding winit event loop to the engine state");
 
     /* -- INITIALIZING MECHANISMS -- */
@@ -34,7 +33,7 @@ where
     info!("Retreiving event loop object from the engine state");
     let event_loop = {
         let mut event_loop = None;
-        state.callback_substate_mut(|IOState { event_loop: el, .. }| event_loop = el.take());
+        state.callback_substate_mut(|MainLoopState(el)| event_loop = el.take());
         event_loop.unwrap()
     };
     info!("Done retreiving event loop object from the engine state");
@@ -53,23 +52,53 @@ where
         trace!("Handling next event: {:?}", ev);
         let current_time = time::Instant::now();
         match ev {
-            UserEvent(Event::Tick(delta_time)) => {
+            WinitEvent::UserEvent(Event::Tick(delta_time)) => {
                 debug!("Performing tick (delta time: {:?})", delta_time);
                 mechanisms.clink_event(&mut state, Event::Tick(delta_time));
                 debug!("Finished tick");
             }
-            UserEvent(Event::Draw(delta_time)) => {
+            WinitEvent::UserEvent(Event::Draw(delta_time)) => {
                 debug!("Performing draw call (delta time: {:?})", delta_time);
                 mechanisms.clink_event(&mut state, Event::Draw(delta_time));
                 debug!("Finished draw call");
             }
-            LoopDestroyed => {
+            WinitEvent::LoopDestroyed => {
                 info!("Terminating main loop");
                 info!("Terminating mechanisms");
                 mechanisms.clink_event(&mut state, Event::Termination);
                 info!("Finished terminating mechanisms");
             }
-            MainEventsCleared => {
+            WinitEvent::WindowEvent {
+                event:
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: keyboard_state,
+                                virtual_keycode: Some(vkk),
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                state.callback_substate_mut(
+                    |IOState {
+                         input:
+                             Input {
+                                 pressed_keys: pk, ..
+                             },
+                         ..
+                     }| match keyboard_state {
+                        winit::event::ElementState::Pressed => {
+                            pk.insert(vkk);
+                        }
+                        winit::event::ElementState::Released => {
+                            pk.remove(&vkk);
+                        }
+                    },
+                );
+            }
+            WinitEvent::MainEventsCleared => {
                 let (desired_tick_period, desired_min_draw_period) = {
                     let mut res = None;
                     state.callback_substate_mut(
