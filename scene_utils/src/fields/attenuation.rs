@@ -3,6 +3,7 @@
 ///
 /// Default attenuation is 1.0 for constant, and 0.0 for other parts,
 /// meaning that the light will not decay over distance.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Attenuation {
     pub constant: f32,
     pub linear: f32,

@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/vim,rust,macos,linux,emacs,windows,intellij+all,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=vim,rust,macos,linux,emacs,windows,intellij+all,visualstudiocode
 
+### Project-specific ###
+*.spv
+
 ### Emacs ###
 # -*- mode: gitignore; -*-
 *~

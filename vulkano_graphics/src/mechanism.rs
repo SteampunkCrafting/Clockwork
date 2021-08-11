@@ -12,14 +12,14 @@ use std::{sync::Arc, time::Duration};
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, DynamicState},
     device::{Device, DeviceExtensions, Queue},
+    format::Format,
     framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract},
-    image::{ImageUsage, SwapchainImage},
+    image::{AttachmentImage, ImageUsage, SwapchainImage},
     instance::{Instance, PhysicalDevice},
     pipeline::viewport::Viewport,
-    single_pass_renderpass,
     swapchain::{
         self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, Surface,
-        SurfaceTransform, Swapchain, SwapchainCreationError,
+        SurfaceTransform, Swapchain,
     },
     sync::{self, FlushError, GpuFuture},
 };
@@ -130,20 +130,7 @@ where
                 }
 
                 if *recreate_swapchain {
-                    let dimensions: [u32; 2] = surface.window().inner_size().into();
-                    let (new_swapchain, new_images) =
-                        match swapchain.recreate_with_dimensions(dimensions) {
-                            Ok(r) => r,
-                            Err(SwapchainCreationError::UnsupportedDimensions) => return,
-                            Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
-                        };
-                    *swapchain = new_swapchain;
-                    *framebuffers = window_size_dependent_setup(
-                        &new_images,
-                        graphics_state.render_pass.clone(),
-                        &mut graphics_state.dynamic_state,
-                    );
-                    *recreate_swapchain = false;
+                    todo!()
                 }
 
                 /* ---- DRAWING ---- */
@@ -158,7 +145,7 @@ where
                         .begin_render_pass(
                             framebuffers[image_num].clone(),
                             vulkano::command_buffer::SubpassContents::Inline,
-                            vec![[0.0, 0.0, 0.0].into()],
+                            vec![[0.0, 0.0, 0.0].into(), 1f32.into()],
                         )
                         .unwrap();
 
@@ -259,7 +246,7 @@ where
                 .unwrap();
                 let queue = queues.next().expect("Failed to create queue");
 
-                /* ---- SWAPCHAIN, IMAGES ---- */
+                /* ---- SWAPCHAIN, IMAGES, DEPTH BUFFER ---- */
                 let (swapchain, images) = {
                     let caps = surface.capabilities(physical_device).unwrap();
                     let alpha = caps.supported_composite_alpha.iter().next().unwrap();
@@ -284,21 +271,33 @@ where
                     .unwrap()
                 };
 
+                let depth_buffer = AttachmentImage::transient(
+                    device.clone(),
+                    surface.window().inner_size().into(),
+                    Format::D16Unorm,
+                )
+                .unwrap();
+
                 /* ---- STUFF TO ALLOCATE SOMEWHERE ELSE ---- */
                 let render_pass = Arc::new(
-                    single_pass_renderpass!(
-                        device.clone(),
+                    vulkano::single_pass_renderpass!(device.clone(),
                         attachments: {
                             color: {
                                 load: Clear,
                                 store: Store,
                                 format: swapchain.format(),
                                 samples: 1,
+                            },
+                            depth: {
+                                load: Clear,
+                                store: DontCare,
+                                format: Format::D16Unorm,
+                                samples: 1,
                             }
                         },
                         pass: {
                             color: [color],
-                            depth_stencil: {}
+                            depth_stencil: {depth}
                         }
                     )
                     .unwrap(),
@@ -312,8 +311,12 @@ where
                     write_mask: None,
                     reference: None,
                 };
-                let framebuffers =
-                    window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
+                let framebuffers = window_size_dependent_setup(
+                    &images,
+                    &depth_buffer,
+                    render_pass.clone(),
+                    &mut dynamic_state,
+                );
                 let recreate_swapchain = false;
                 let previous_frame_end = Some(sync::now(device.clone()).boxed());
                 let layers: Vec<_> = vulkano_graphics.layers.drain(..).collect();
@@ -348,6 +351,7 @@ where
 
 fn window_size_dependent_setup(
     images: &[Arc<SwapchainImage<Window>>],
+    depth_image: &Arc<AttachmentImage>,
     render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
     dynamic_state: &mut DynamicState,
 ) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
@@ -366,6 +370,8 @@ fn window_size_dependent_setup(
             Arc::new(
                 Framebuffer::start(render_pass.clone())
                     .add(image.clone())
+                    .unwrap()
+                    .add(depth_image.clone())
                     .unwrap()
                     .build()
                     .unwrap(),

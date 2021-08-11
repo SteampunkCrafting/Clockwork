@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Color {
     red: u8,
     green: u8,
@@ -69,5 +69,26 @@ impl Into<[f32; 4]> for Color {
             .map(|x| x / 255f32)
             .collect();
         [vec[0], vec[1], vec[2], vec[3]]
+    }
+}
+
+impl Into<[f32; 3]> for Color {
+    fn into(self) -> [f32; 3] {
+        let vec: Vec<_> = Into::<[u8; 4]>::into(self)
+            .iter()
+            .cloned()
+            .map(|x| x as f32)
+            .map(|x| x / 255f32)
+            .collect();
+        [vec[0], vec[1], vec[2]]
+    }
+}
+
+impl Into<[u8; 3]> for Color {
+    fn into(self) -> [u8; 3] {
+        let Self {
+            red, green, blue, ..
+        } = self;
+        [red, green, blue]
     }
 }

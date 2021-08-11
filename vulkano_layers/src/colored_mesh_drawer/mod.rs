@@ -1,4 +1,9 @@
-use self::{buffered_mesh::BufferedMesh, instance_data::InstanceData, vertex::Vertex};
+use self::{
+    buffered_mesh::BufferedMesh,
+    instance_data::InstanceData,
+    util::{make_fragment_uniforms, make_vertex_uniforms},
+    vertex::Vertex,
+};
 use asset_storage::{asset_storage::AssetStorageKey, prelude::AssetStorage};
 use clockwork_core::clockwork::CallbackSubstate;
 use graphics::{
@@ -14,9 +19,12 @@ use graphics::{
 };
 use legion_ecs::{prelude::*, state::LegionState};
 use physics::state::PhysicsState;
-use scene_utils::prelude::ColoredMesh;
+use scene_utils::{
+    components::{AmbientLight, DirectionalLight, PhongMaterial},
+    prelude::ColoredMesh,
+};
 use std::{collections::HashMap, sync::Arc};
-pub use util::*;
+pub use util::{CameraEntity, DrawMarker, DrawableEntity};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool},
     descriptor::descriptor_set::PersistentDescriptorSet,
@@ -44,6 +52,7 @@ pub struct ColoredMeshDrawer<I>(
     Option<(
         Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
         CpuBufferPool<vertex_shader::ty::Data>,
+        CpuBufferPool<fragment_shader::ty::Data>,
     )>,
     HashMap<I, BufferedMesh>,
 )
@@ -96,15 +105,20 @@ where
                                                 .main_entry_point(),
                                             (),
                                         )
+                                        .depth_stencil_simple_depth()
                                         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
                                         .build(device.clone())
                                         .unwrap(),
                                 ),
                                 CpuBufferPool::new(device.clone(), BufferUsage::all()),
+                                CpuBufferPool::new(device.clone(), BufferUsage::all()),
                             ));
                         }
                         (
-                            Self(Some((pipeline, uniform_buffer)), buffered_meshes),
+                            Self(
+                                Some((pipeline, vertex_uniform_buffer, fragment_uniform_buffer)),
+                                buffered_meshes,
+                            ),
                             Some((camera, camera_body)),
                         ) => {
                             // DRAWING
@@ -113,14 +127,10 @@ where
                             let bodies = &physics.bodies;
 
                             /* ---- GETTING CAMERA ENTITY ---- */
+                            let camera_body = bodies.get(camera_body.clone()).unwrap();
                             let projection_matrix: [[f32; 4]; 4] = camera.clone().into();
-                            let view_matrix: [[f32; 4]; 4] = bodies
-                                .get(camera_body.clone())
-                                .unwrap()
-                                .position()
-                                .inverse()
-                                .to_matrix()
-                                .into();
+                            let view_matrix: [[f32; 4]; 4] =
+                                camera_body.position().inverse().to_matrix().into();
 
                             /* ---- GETTING DRAWABLES ---- */
                             let instanced_data = {
@@ -138,16 +148,46 @@ where
                             };
 
                             /* ---- RENDERING ---- */
-                            let set = Arc::new(
+                            let vertex_set = Arc::new(
                                 PersistentDescriptorSet::start(
                                     pipeline.descriptor_set_layout(0).unwrap().clone(),
                                 )
                                 .add_buffer(
-                                    uniform_buffer
-                                        .next(vertex_shader::ty::Data {
-                                            projection: projection_matrix,
-                                            view: view_matrix,
-                                        })
+                                    vertex_uniform_buffer
+                                        .next(make_vertex_uniforms(projection_matrix, view_matrix))
+                                        .unwrap(),
+                                )
+                                .unwrap()
+                                .build()
+                                .unwrap(),
+                            );
+
+                            let fragment_set = Arc::new(
+                                PersistentDescriptorSet::start(
+                                    pipeline.descriptor_set_layout(1).unwrap().clone(),
+                                )
+                                .add_buffer(
+                                    fragment_uniform_buffer
+                                        .next(make_fragment_uniforms(
+                                            (camera.clone(), camera_body.clone()),
+                                            PhongMaterial {
+                                                ambient: [255; 3].into(),
+                                                diffuse: [255; 3].into(),
+                                                specular: [1; 3].into(),
+                                                specular_power: 16.0,
+                                            },
+                                            AmbientLight {
+                                                color: [51; 3].into(),
+                                            },
+                                            &mut [DirectionalLight {
+                                                color: [128, 0, 0].into(),
+                                                direction: [0.0, 0.0, -1.0].into(),
+                                            }]
+                                            .iter()
+                                            .cloned(),
+                                            &mut [].iter().cloned(),
+                                            &mut [].iter().cloned(),
+                                        ))
                                         .unwrap(),
                                 )
                                 .unwrap()
@@ -176,7 +216,7 @@ where
                                             .unwrap(),
                                         ],
                                         indices.clone(),
-                                        set.clone(),
+                                        (vertex_set.clone(), fragment_set.clone()),
                                         (),
                                     )
                                     .unwrap();

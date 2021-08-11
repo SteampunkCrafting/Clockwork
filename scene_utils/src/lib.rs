@@ -4,18 +4,24 @@ pub mod mesh_vertex;
 pub mod components {
     mod camera;
     mod light;
+    mod material;
 
     pub use camera::*;
     pub use light::*;
+    pub use material::*;
 }
 
 pub mod fields {
     mod attenuation;
     mod color;
 
+    use std::marker::PhantomData;
+
+    use physics::prelude::nalgebra::{ArrayStorage, Vector3};
+
     pub use attenuation::*;
     pub use color::*;
-    pub type Vector3f = physics::prelude::Vector<f32>;
+    pub type Vector3f = Vector3<f32>;
 }
 
 pub mod prelude {
