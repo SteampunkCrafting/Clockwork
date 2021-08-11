@@ -106,6 +106,7 @@ where
                                             (),
                                         )
                                         .depth_stencil_simple_depth()
+                                        .cull_mode_back()
                                         .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
                                         .build(device.clone())
                                         .unwrap(),
