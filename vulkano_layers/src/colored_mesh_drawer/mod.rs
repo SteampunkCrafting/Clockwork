@@ -23,7 +23,7 @@ use graphics::{
 use legion_ecs::{prelude::*, state::LegionState};
 use physics::state::PhysicsState;
 use scene_utils::{
-    components::{DirectionalLight, PhongMaterial},
+    components::PhongMaterial,
     prelude::{ColoredMesh, ColoredMeshStorage, PhongMaterialStorage},
 };
 use std::{collections::HashMap, sync::Arc};
@@ -233,12 +233,9 @@ where
                                         )
                                         .add_buffer(
                                             fragment_mesh_uniform_buffer
-                                                .next(make_mesh_fragment_uniforms(PhongMaterial {
-                                                    ambient: [255; 3].into(),
-                                                    diffuse: [255; 3].into(),
-                                                    specular: [1; 3].into(),
-                                                    specular_power: 16.0,
-                                                }))
+                                                .next(make_mesh_fragment_uniforms(
+                                                    materials.get(mesh_id.clone()).lock().clone(),
+                                                ))
                                                 .unwrap(),
                                         )
                                         .unwrap()

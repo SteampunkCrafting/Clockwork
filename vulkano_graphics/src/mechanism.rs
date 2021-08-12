@@ -18,8 +18,8 @@ use vulkano::{
     instance::{Instance, PhysicalDevice},
     pipeline::viewport::Viewport,
     swapchain::{
-        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, Surface,
-        SurfaceTransform, Swapchain,
+        self, AcquireError, ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform,
+        Swapchain,
     },
     sync::{self, FlushError, GpuFuture},
 };
@@ -28,7 +28,6 @@ use winit::window::WindowBuilder;
 
 struct PrivateState {
     swapchain: Arc<Swapchain<Window>>,
-    surface: Arc<Surface<Window>>,
     previous_frame_end: Option<Box<dyn GpuFuture>>,
     recreate_swapchain: bool,
     framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
@@ -103,11 +102,11 @@ where
                     mechanism_state:
                         Some(PrivateState {
                             swapchain,
-                            surface,
                             previous_frame_end,
                             recreate_swapchain,
                             framebuffers,
                             queue,
+                            ..
                         }),
                 },
             ) => {
@@ -331,7 +330,6 @@ where
                     }),
                     mechanism_state: Some(PrivateState {
                         swapchain,
-                        surface,
                         previous_frame_end,
                         recreate_swapchain,
                         framebuffers,

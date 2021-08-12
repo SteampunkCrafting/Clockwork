@@ -1,6 +1,6 @@
 use physics::prelude::nalgebra::UnitVector3;
 
-use crate::fields::{Attenuation, Color, Vector3f};
+use crate::fields::{Attenuation, Color};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct AmbientLight {

@@ -44,7 +44,7 @@ pub fn make_mesh_fragment_uniforms(
 }
 
 pub fn make_world_fragment_uniforms(
-    (camera_component, camera_body): (Camera, RigidBody),
+    (_, camera_body): (Camera, RigidBody),
     AmbientLight { color }: AmbientLight,
     dir_lights: Vec<DirectionalLight>,
     point_lights: Vec<(PointLight, RigidBody)>,
@@ -140,10 +140,11 @@ pub fn make_world_fragment_uniforms(
 /// as fields.
 unsafe fn partially_init_array<T, U, const N: usize>(
     into: impl Fn(T) -> U,
-    mut ts: impl IntoIterator<Item = T>,
+    items: impl IntoIterator<Item = T>,
 ) -> [U; N] {
     let mut arr: [U; N] = MaybeUninit::uninit().assume_init();
-    ts.into_iter()
+    items
+        .into_iter()
         .take(N)
         .map(into)
         .enumerate()
