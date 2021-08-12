@@ -11,6 +11,10 @@ use super::{fragment_shader, vertex_shader};
 pub struct DrawMarker;
 
 pub type CameraEntity = (Read<Camera>, Read<RigidBodyHandle>);
+pub type AmbientLightEntity = (Read<DrawMarker>, Read<AmbientLight>);
+pub type DirectionalLightEntity = (Read<DrawMarker>, Read<DirectionalLight>);
+pub type PointLightEntity = (Read<DrawMarker>, Read<PointLight>, Read<RigidBodyHandle>);
+pub type SpotLightEntity = (Read<DrawMarker>, Read<SpotLight>, Read<RigidBodyHandle>);
 pub type DrawableEntity<MeshID> = (Read<DrawMarker>, Read<MeshID>, Read<RigidBodyHandle>);
 
 pub fn make_vertex_uniforms(
@@ -20,66 +24,55 @@ pub fn make_vertex_uniforms(
     vertex_shader::ty::Data { projection, view }
 }
 
-pub fn make_fragment_uniforms(
-    (camera_component, camera_body): (Camera, RigidBody),
+pub fn make_mesh_fragment_uniforms(
     PhongMaterial {
         ambient,
         diffuse,
         specular,
         specular_power,
     }: PhongMaterial,
-    AmbientLight { color }: AmbientLight,
-    dir_lights: &mut dyn Iterator<Item = DirectionalLight>,
-    point_lights: &mut dyn Iterator<Item = (PointLight, RigidBody)>,
-    spot_lights: &mut dyn Iterator<Item = (SpotLight, RigidBody)>,
-) -> fragment_shader::ty::Data {
+) -> fragment_shader::ty::DataMesh {
     use fragment_shader::ty::*;
-
-    const DIR_LIGHTS_NUM: usize = 32;
-    const POINT_LIGHTS_NUM: usize = 32;
-    const SPOT_LIGHTS_NUM: usize = 32;
-
-    fragment_shader::ty::Data {
-        num_dir_lights: dir_lights.size_hint().0 as u32,
-        num_point_lights: point_lights.size_hint().0 as u32,
-        num_spot_lights: spot_lights.size_hint().0 as u32,
-
+    DataMesh {
         material: PhongMaterial {
             ambient: ambient.into(),
             diffuse: diffuse.into(),
             specular: specular.into(),
             specular_power: specular_power.into(),
         },
+    }
+}
 
-        ambient_light: AmbientLight {
-            color: color.clone().into(),
-        },
-
-        dir_lights: {
-            let mut arr: [DirectionalLight; DIR_LIGHTS_NUM] =
-                unsafe { MaybeUninit::uninit().assume_init() };
-            dir_lights
-                .take(DIR_LIGHTS_NUM)
-                .map(|light| DirectionalLight {
+pub fn make_world_fragment_uniforms(
+    (camera_component, camera_body): (Camera, RigidBody),
+    AmbientLight { color }: AmbientLight,
+    dir_lights: Vec<DirectionalLight>,
+    point_lights: Vec<(PointLight, RigidBody)>,
+    spot_lights: Vec<(SpotLight, RigidBody)>,
+) -> fragment_shader::ty::DataWorld {
+    use fragment_shader::ty::*;
+    unsafe {
+        fragment_shader::ty::DataWorld {
+            num_dir_lights: dir_lights.len() as u32,
+            num_point_lights: point_lights.len() as u32,
+            num_spot_lights: spot_lights.len() as u32,
+            ambient_light: AmbientLight {
+                color: color.clone().into(),
+            },
+            dir_lights: partially_init_array(
+                |l| DirectionalLight {
                     view_direction: (camera_body.position().to_matrix().transpose()
-                        * light.direction.fixed_resize::<4, 1>(0.0))
+                        * l.direction.fixed_resize::<4, 1>(0.0))
                     .fixed_resize::<3, 1>(0.0)
                     .into(),
-                    color: light.color.into(),
+                    color: l.color.into(),
                     _dummy0: Default::default(),
                     _dummy1: Default::default(),
-                })
-                .enumerate()
-                .for_each(|(i, light)| arr[i] = light);
-            arr
-        },
-
-        point_lights: {
-            let mut arr: [PointLight; POINT_LIGHTS_NUM] =
-                unsafe { MaybeUninit::uninit().assume_init() };
-            point_lights
-                .take(POINT_LIGHTS_NUM)
-                .map(|(light, body)| PointLight {
+                },
+                dir_lights,
+            ),
+            point_lights: partially_init_array(
+                |(light, body)| PointLight {
                     view_position: camera_body
                         .position()
                         .inv_mul(body.position())
@@ -94,18 +87,11 @@ pub fn make_fragment_uniforms(
                     _dummy0: Default::default(),
                     _dummy1: Default::default(),
                     _dummy2: Default::default(),
-                })
-                .enumerate()
-                .for_each(|(i, light)| arr[i] = light);
-            arr
-        },
-
-        spot_lights: {
-            let mut arr: [SpotLight; SPOT_LIGHTS_NUM] =
-                unsafe { MaybeUninit::uninit().assume_init() };
-            spot_lights
-                .take(SPOT_LIGHTS_NUM)
-                .map(|(light, body)| SpotLight {
+                },
+                point_lights,
+            ),
+            spot_lights: partially_init_array(
+                |(light, body)| SpotLight {
                     opening_angle_rad: light.opening_angle,
                     view_position: camera_body
                         .position()
@@ -132,16 +118,35 @@ pub fn make_fragment_uniforms(
                     _dummy2: Default::default(),
                     _dummy3: Default::default(),
                     _dummy4: Default::default(),
-                })
-                .enumerate()
-                .for_each(|(i, light)| arr[i] = light);
-            arr
-        },
-
-        _dummy0: Default::default(),
-        _dummy1: Default::default(),
-        _dummy2: Default::default(),
-        _dummy3: Default::default(),
-        _dummy4: Default::default(),
+                },
+                spot_lights,
+            ),
+            _dummy0: Default::default(),
+            _dummy1: Default::default(),
+            _dummy2: Default::default(),
+            _dummy3: Default::default(),
+        }
     }
+}
+
+/// Creates an uninitialized array on the stack, and then moves the contents
+/// of the input collection into this array, until either the array is full,
+/// or the collection ends.
+///
+/// If the size of the collection is less than the size of the array, then
+/// part of the array remains uninitialized (even if the return type states the opposite).
+///
+/// Dropping uninitialized structures will cause undefined behavior, if they contain references
+/// as fields.
+unsafe fn partially_init_array<T, U, const N: usize>(
+    into: impl Fn(T) -> U,
+    mut ts: impl IntoIterator<Item = T>,
+) -> [U; N] {
+    let mut arr: [U; N] = MaybeUninit::uninit().assume_init();
+    ts.into_iter()
+        .take(N)
+        .map(into)
+        .enumerate()
+        .for_each(|(i, u)| arr[i] = u);
+    arr
 }

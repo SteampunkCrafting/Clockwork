@@ -15,9 +15,7 @@ pub mod fields {
     mod attenuation;
     mod color;
 
-    use std::marker::PhantomData;
-
-    use physics::prelude::nalgebra::{ArrayStorage, Vector3};
+    use physics::prelude::nalgebra::Vector3;
 
     pub use attenuation::*;
     pub use color::*;
@@ -32,6 +30,8 @@ pub mod prelude {
     pub use crate::components;
     pub use crate::fields;
 
+    use self::components::PhongMaterial;
+
     /// A Mesh with colored vertices
     pub type ColoredMesh = Mesh<ColoredVertex>;
 
@@ -43,4 +43,7 @@ pub mod prelude {
 
     /// An AssetStorage of textured meshes
     pub type TexturedMeshStorage<K> = AssetStorage<K, TexturedMesh>;
+
+    /// An AssetStorage of phong materials
+    pub type PhongMaterialStorage<K> = AssetStorage<K, PhongMaterial>;
 }

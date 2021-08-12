@@ -12,9 +12,7 @@ layout(location = 1) in vec3 view_normal;
 layout(location = 2) in vec4 vert_color;
 
 // Uniform Data
-layout(set = 1, binding = 0) uniform Data {
-  PhongMaterial material;
-
+layout(set = 1, binding = 0) uniform DataWorld {
   AmbientLight ambient_light;
 
   uint num_dir_lights;
@@ -26,7 +24,10 @@ layout(set = 1, binding = 0) uniform Data {
   uint num_spot_lights;
   SpotLight spot_lights[32];
 }
-uniforms;
+world_uniforms;
+
+layout(set = 2, binding = 0) uniform DataMesh { PhongMaterial material; }
+mesh_uniforms;
 
 /* ---- OUTPUT ---- */
 layout(location = 0) out vec4 frag_color;
@@ -39,12 +40,13 @@ void main() {
 
   /* -- LIGHT APPLICATION -- */
   // AMBIENT
-  frag_color += light_apply(uniforms.ambient_light, uniforms.material, vertex);
+  frag_color +=
+      light_apply(world_uniforms.ambient_light, mesh_uniforms.material, vertex);
 
   // DIRECTIONAL
-  for (uint i = 0; i < uniforms.num_dir_lights; ++i)
-    frag_color +=
-        light_apply(uniforms.dir_lights[i], uniforms.material, vertex);
+  for (uint i = 0; i < world_uniforms.num_dir_lights; ++i)
+    frag_color += light_apply(world_uniforms.dir_lights[i],
+                              mesh_uniforms.material, vertex);
 
   /* -- CLAMPING -- */
   frag_color = clamp(frag_color, 0, 1);

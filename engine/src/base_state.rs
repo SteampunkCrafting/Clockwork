@@ -4,7 +4,7 @@ use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use main_loop::{prelude::IOState, state::MainLoopState};
 use physics::state::PhysicsState;
-use scene::prelude::ColoredMeshStorage;
+use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage};
 
 #[derive(Builder)]
 #[builder(pattern = "owned", setter(into, prefix = "with"))]
@@ -13,6 +13,7 @@ where
     C: AssetStorageKey,
 {
     pub colored_meshes: ColoredMeshStorage<C>,
+    pub materials: PhongMaterialStorage<C>,
 }
 
 #[derive(Builder)]
@@ -154,5 +155,18 @@ where
 
     fn substate_mut(&mut self) -> &mut MainLoopState {
         &mut self.main_loop_state
+    }
+}
+
+impl<C> Substate<PhongMaterialStorage<C>> for BaseState<C>
+where
+    C: AssetStorageKey,
+{
+    fn substate(&self) -> &PhongMaterialStorage<C> {
+        &self.assets.materials
+    }
+
+    fn substate_mut(&mut self) -> &mut PhongMaterialStorage<C> {
+        &mut self.assets.materials
     }
 }
