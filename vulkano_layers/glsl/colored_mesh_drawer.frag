@@ -1,9 +1,7 @@
 #version 450
-#include "../glsl_lib/light.glsl"
-#include "../glsl_lib/phong_material.glsl"
-#include "../glsl_lib/vertex.glsl"
-
 precision highp float;
+
+#include "../glsl_lib/light.glsl"
 
 /* ---- INPUT ---- */
 // Vertex Data
@@ -46,6 +44,11 @@ void main() {
   // DIRECTIONAL
   for (uint i = 0; i < world_uniforms.num_dir_lights; ++i)
     frag_color += light_apply(world_uniforms.dir_lights[i],
+                              mesh_uniforms.material, vertex);
+
+  // POINT
+  for (uint i = 0; i < world_uniforms.num_point_lights; ++i)
+    frag_color += light_apply(world_uniforms.point_lights[i],
                               mesh_uniforms.material, vertex);
 
   /* -- CLAMPING -- */
