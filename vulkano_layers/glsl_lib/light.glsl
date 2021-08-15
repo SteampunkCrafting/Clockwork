@@ -99,4 +99,21 @@ vec4 light_apply(PointLight light, PhongMaterial material, Vertex vertex) {
   return clamp(result, 0, 1);
 }
 
+vec4 light_apply(SpotLight light, PhongMaterial material, Vertex vertex) {
+  vec3 view_dir = normalize(vertex.position - light.view_position);
+  float factor = 1.0 - (1.0 - dot(view_dir, light.view_direction)) /
+                           (1 - cos(light.opening_angle_rad));
+
+  if (factor > 0.0) {
+    PointLight pl = {
+        light.view_position,
+        light.color,
+        light.attenuation,
+    };
+    return factor * light_apply(pl, material, vertex);
+  }
+
+  return vec4(0.0);
+}
+
 #endif

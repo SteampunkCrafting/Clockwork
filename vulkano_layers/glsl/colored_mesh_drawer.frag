@@ -51,6 +51,11 @@ void main() {
     frag_color += light_apply(world_uniforms.point_lights[i],
                               mesh_uniforms.material, vertex);
 
+  // SPOT
+  for (uint i = 0; i < world_uniforms.num_spot_lights; ++i)
+    frag_color += light_apply(world_uniforms.spot_lights[i],
+                              mesh_uniforms.material, vertex);
+
   /* -- CLAMPING -- */
   frag_color = clamp(frag_color, 0, 1);
 }
