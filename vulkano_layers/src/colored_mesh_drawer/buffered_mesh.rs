@@ -25,18 +25,7 @@ impl From<(Arc<Device>, &ColoredMesh)> for BufferedMesh {
             .unwrap(),
             indices: CpuAccessibleBuffer::from_iter(
                 dev,
-                BufferUsage {
-                    transfer_source: true,
-                    transfer_destination: true,
-                    uniform_texel_buffer: true,
-                    storage_texel_buffer: true,
-                    uniform_buffer: true,
-                    storage_buffer: true,
-                    index_buffer: true,
-                    vertex_buffer: true,
-                    indirect_buffer: true,
-                    device_address: true,
-                },
+                BufferUsage::all(),
                 false,
                 indices.iter().cloned().map(|i| i as u32),
             )

@@ -7,13 +7,12 @@ use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
     format::Format,
     image::{Dimensions, ImmutableImage, MipmapsCount},
-    sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
 };
 
 pub struct BufferedMesh {
     pub vertices: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pub indices: Arc<CpuAccessibleBuffer<[u32]>>,
-    pub texture: Option<(Arc<ImmutableImage<Format>>, Arc<Sampler>)>,
+    pub texture: Option<Arc<ImmutableImage<Format>>>,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -68,21 +67,7 @@ impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
                         )
                         .unwrap()
                     };
-                    let sampler = Sampler::new(
-                        device.clone(),
-                        Filter::Linear,
-                        Filter::Linear,
-                        MipmapMode::Nearest,
-                        SamplerAddressMode::Repeat,
-                        SamplerAddressMode::Repeat,
-                        SamplerAddressMode::Repeat,
-                        0.0,
-                        1.0,
-                        0.0,
-                        0.0,
-                    )
-                    .unwrap();
-                    Some((texture, sampler))
+                    Some(texture)
                 }
             },
         }

@@ -7,10 +7,13 @@ use scene_utils::components::{
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuBufferPool},
+    format::Format,
     framebuffer::Subpass,
+    image::{ImmutableImage, MipmapsCount},
     pipeline::{
         vertex::OneVertexOneInstanceDefinition, GraphicsPipeline, GraphicsPipelineAbstract,
     },
+    sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
 };
 
 use crate::util::partially_init_array;
@@ -26,6 +29,8 @@ where
     pub vertex_uniform_pool: CpuBufferPool<vertex_shader::ty::Data>,
     pub fragment_uniform_mesh_pool: CpuBufferPool<fragment_shader::ty::DataMesh>,
     pub fragment_uniform_world_pool: CpuBufferPool<fragment_shader::ty::DataWorld>,
+    pub texture_sampler: Arc<Sampler>,
+    pub default_texture: Arc<ImmutableImage<Format>>,
 }
 
 impl<I> From<&GraphicsState> for InnerState<I>
@@ -36,6 +41,7 @@ where
         GraphicsState {
             render_pass,
             device,
+            queue,
             ..
         }: &GraphicsState,
     ) -> Self {
@@ -67,6 +73,32 @@ where
             fragment_uniform_mesh_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
             fragment_uniform_world_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
             buffered_meshes: Default::default(),
+            texture_sampler: Sampler::new(
+                device.clone(),
+                Filter::Linear,
+                Filter::Linear,
+                MipmapMode::Nearest,
+                SamplerAddressMode::Repeat,
+                SamplerAddressMode::Repeat,
+                SamplerAddressMode::Repeat,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+            )
+            .unwrap(),
+            default_texture: ImmutableImage::from_iter(
+                vec![0f32, 0f32, 0f32, 0f32].iter().cloned(),
+                vulkano::image::Dimensions::Dim2d {
+                    width: 1,
+                    height: 1,
+                },
+                MipmapsCount::One,
+                Format::R8G8B8A8Srgb,
+                queue.clone(),
+            )
+            .unwrap()
+            .0,
         }
     }
 }
@@ -106,8 +138,19 @@ pub fn make_mesh_fragment_uniforms(material: PhongMaterial) -> fragment_shader::
                 specular: specular.into(),
                 specular_power: specular_power.into(),
             },
+            is_textured: 0,
+            _dummy0: Default::default(),
         },
-        PhongMaterial::Textured { .. } => todo!(),
+        PhongMaterial::Textured { specular_power, .. } => fs::DataMesh {
+            material: fs::PhongMaterial {
+                ambient: Default::default(),
+                diffuse: Default::default(),
+                specular: Default::default(),
+                specular_power: specular_power.into(),
+            },
+            is_textured: 1,
+            _dummy0: Default::default(),
+        },
     }
 }
 

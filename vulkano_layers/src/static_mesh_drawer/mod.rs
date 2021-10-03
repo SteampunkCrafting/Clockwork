@@ -1,7 +1,3 @@
-use std::{collections::HashMap, sync::Arc};
-
-use crate::static_mesh_drawer::buffered_mesh::BufferedMesh;
-
 use self::inner_state::InnerState;
 use asset_storage::asset_storage::AssetStorageKey;
 use graphics::{graphics_state::GraphicsState, vulkano_layer::VulkanoLayer};
@@ -15,6 +11,7 @@ use scene_utils::{
     prelude::{PhongMaterialStorage, TexturedMeshStorage},
 };
 use state_requirements::EngineStateRequirements;
+use std::{collections::HashMap, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
     descriptor::descriptor_set::PersistentDescriptorSet,
@@ -44,6 +41,8 @@ where
             vertex_uniform_pool,
             fragment_uniform_mesh_pool,
             fragment_uniform_world_pool,
+            texture_sampler,
+            default_texture,
         } = self.0.get_or_insert_with(|| graphics_state.into());
 
         /* ---- STATE DESTRUCTURING ---- */
@@ -148,18 +147,15 @@ where
 
                             /* -- SETTING UP PER-INSTANCE UNIFORMS AND WRITING DRAW CALLS -- */
                             for (mesh_id, instances) in instanced_data {
-                                let BufferedMesh {
-                                    vertices,
-                                    indices,
-                                    texture: _,
-                                } = buffered_meshes.entry(mesh_id.clone()).or_insert_with(|| {
-                                    (
-                                        graphics_state,
-                                        &*meshes.get(mesh_id.clone()).lock(),
-                                        &*materials.get(mesh_id.clone()).lock(),
-                                    )
-                                        .into()
-                                });
+                                let mesh =
+                                    buffered_meshes.entry(mesh_id.clone()).or_insert_with(|| {
+                                        (
+                                            graphics_state,
+                                            &*meshes.get(mesh_id.clone()).lock(),
+                                            &*materials.get(mesh_id.clone()).lock(),
+                                        )
+                                            .into()
+                                    });
                                 let fragment_mesh_uniform_set = Arc::new(
                                     PersistentDescriptorSet::start(
                                         pipeline.descriptor_set_layout(2).unwrap().clone(),
@@ -175,12 +171,28 @@ where
                                     .build()
                                     .unwrap(),
                                 );
+                                let fragment_mesh_texture_set = Arc::new(
+                                    PersistentDescriptorSet::start(
+                                        pipeline.descriptor_set_layout(3).unwrap().clone(),
+                                    )
+                                    .add_sampled_image(
+                                        mesh.texture
+                                            .as_ref()
+                                            .map(Clone::clone)
+                                            .unwrap_or_else(|| default_texture.clone()),
+                                        texture_sampler.clone(),
+                                    )
+                                    .unwrap()
+                                    .build()
+                                    .unwrap(),
+                                );
+
                                 command_buffer
                                     .draw_indexed(
                                         pipeline.clone(),
                                         dynamic_state,
                                         vec![
-                                            vertices.clone(),
+                                            mesh.vertices.clone(),
                                             CpuAccessibleBuffer::from_iter(
                                                 device.clone(),
                                                 BufferUsage::all(),
@@ -189,11 +201,12 @@ where
                                             )
                                             .unwrap(),
                                         ],
-                                        indices.clone(),
+                                        mesh.indices.clone(),
                                         (
                                             vertex_uniform_set.clone(),
                                             fragment_world_uniform_set.clone(),
                                             fragment_mesh_uniform_set.clone(),
+                                            fragment_mesh_texture_set.clone(),
                                         ),
                                         (),
                                     )
