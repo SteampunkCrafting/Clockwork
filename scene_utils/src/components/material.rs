@@ -1,9 +1,15 @@
-use crate::fields::Color;
+use crate::fields::{Color, Texture2D};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PhongMaterial {
-    pub ambient: Color,
-    pub diffuse: Color,
-    pub specular: Color,
-    pub specular_power: f32,
+#[derive(Clone)]
+pub enum PhongMaterial {
+    Colored {
+        ambient: Color,
+        diffuse: Color,
+        specular: Color,
+        specular_power: f32,
+    },
+    Textured {
+        texture: Texture2D,
+        specular_power: f32,
+    },
 }

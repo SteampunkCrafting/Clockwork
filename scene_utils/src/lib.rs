@@ -14,11 +14,13 @@ pub mod components {
 pub mod fields {
     mod attenuation;
     mod color;
+    mod texture;
 
     use physics::prelude::nalgebra::Vector3;
 
     pub use attenuation::*;
     pub use color::*;
+    pub use texture::*;
     pub type Vector3f = Vector3<f32>;
 }
 

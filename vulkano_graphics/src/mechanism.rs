@@ -11,7 +11,7 @@ use main_loop::{
 use std::{sync::Arc, time::Duration};
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, DynamicState},
-    device::{Device, DeviceExtensions, Queue},
+    device::{Device, DeviceExtensions},
     format::Format,
     framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract},
     image::{AttachmentImage, ImageUsage, SwapchainImage},
@@ -31,7 +31,6 @@ struct PrivateState {
     previous_frame_end: Option<Box<dyn GpuFuture>>,
     recreate_swapchain: bool,
     framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
-    queue: Arc<Queue>,
 }
 
 pub struct VulkanoGraphics<S>
@@ -105,7 +104,6 @@ where
                             previous_frame_end,
                             recreate_swapchain,
                             framebuffers,
-                            queue,
                             ..
                         }),
                 },
@@ -137,7 +135,7 @@ where
                 let command_buffer = {
                     let mut builder = AutoCommandBufferBuilder::primary_one_time_submit(
                         graphics_state.device.clone(),
-                        queue.family(),
+                        graphics_state.queue.family(),
                     )
                     .unwrap();
                     builder
@@ -163,9 +161,13 @@ where
                     .take()
                     .unwrap()
                     .join(acquire_future)
-                    .then_execute(queue.clone(), command_buffer)
+                    .then_execute(graphics_state.queue.clone(), command_buffer)
                     .unwrap()
-                    .then_swapchain_present(queue.clone(), swapchain.clone(), image_num)
+                    .then_swapchain_present(
+                        graphics_state.queue.clone(),
+                        swapchain.clone(),
+                        image_num,
+                    )
                     .then_signal_fence_and_flush();
                 *previous_frame_end = match future {
                     Ok(future) => Some(future.boxed()),
@@ -327,13 +329,13 @@ where
                         dynamic_state,
                         render_pass,
                         device,
+                        queue,
                     }),
                     mechanism_state: Some(PrivateState {
                         swapchain,
                         previous_frame_end,
                         recreate_swapchain,
                         framebuffers,
-                        queue,
                     }),
                 };
                 info!("Done initializing Vulkano Graphics")

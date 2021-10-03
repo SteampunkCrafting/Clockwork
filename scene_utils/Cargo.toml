@@ -6,6 +6,10 @@ edition = "2018"
 [dependencies]
 getset = "0.1.1"
 
+[dependencies.clockwork_core]
+package = "spc_clockwork_core"
+path = "../core"
+
 [dependencies.asset_storage]
 package = "spc_clockwork_asset_storage"
 path = "../asset_storage"

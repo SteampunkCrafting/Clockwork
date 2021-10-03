@@ -81,6 +81,7 @@ where
             dynamic_state,
             render_pass,
             device,
+            ..
         } = graphics_state;
         state.callback_substate(|LegionState { world, .. }| {
             state.callback_substate(|meshes: &ColoredMeshStorage<I>| {

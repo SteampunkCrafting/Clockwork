@@ -8,7 +8,7 @@ where
 {
     fn draw(
         &mut self,
-        state: &S,
+        engine_state: &S,
         graphics_state: &GraphicsState,
         command_buffer: &mut AutoCommandBufferBuilder,
     );
@@ -21,10 +21,10 @@ where
 {
     fn draw(
         &mut self,
-        state: &S,
+        engine_state: &S,
         graphics_state: &GraphicsState,
         command_buffer: &mut AutoCommandBufferBuilder,
     ) {
-        self(state, graphics_state, command_buffer)
+        self(engine_state, graphics_state, command_buffer)
     }
 }

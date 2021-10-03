@@ -1,19 +1,88 @@
-use super::{fragment_shader, vertex_shader};
-use crate::util::partially_init_array;
-use legion_ecs::prelude::Read;
-use physics::prelude::{nalgebra::Vector4, RigidBody, RigidBodyHandle};
+use asset_storage::asset_storage::AssetStorageKey;
+use graphics::graphics_state::GraphicsState;
+use physics::prelude::{nalgebra::Vector4, RigidBody};
 use scene_utils::components::{
     AmbientLight, Camera, DirectionalLight, PhongMaterial, PointLight, SpotLight,
 };
+use std::{collections::HashMap, sync::Arc};
+use vulkano::{
+    buffer::{BufferUsage, CpuBufferPool},
+    framebuffer::Subpass,
+    pipeline::{
+        vertex::OneVertexOneInstanceDefinition, GraphicsPipeline, GraphicsPipelineAbstract,
+    },
+};
 
-pub struct DrawMarker;
+use crate::util::partially_init_array;
 
-pub type CameraEntity = (Read<Camera>, Read<RigidBodyHandle>);
-pub type AmbientLightEntity = (Read<DrawMarker>, Read<AmbientLight>);
-pub type DirectionalLightEntity = (Read<DrawMarker>, Read<DirectionalLight>);
-pub type PointLightEntity = (Read<DrawMarker>, Read<PointLight>, Read<RigidBodyHandle>);
-pub type SpotLightEntity = (Read<DrawMarker>, Read<SpotLight>, Read<RigidBodyHandle>);
-pub type DrawableEntity<MeshID> = (Read<DrawMarker>, Read<MeshID>, Read<RigidBodyHandle>);
+use super::buffered_mesh::{BufferedMesh, InstanceData, Vertex};
+
+pub struct InnerState<I>
+where
+    I: AssetStorageKey,
+{
+    pub buffered_meshes: HashMap<I, BufferedMesh>,
+    pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+    pub vertex_uniform_pool: CpuBufferPool<vertex_shader::ty::Data>,
+    pub fragment_uniform_mesh_pool: CpuBufferPool<fragment_shader::ty::DataMesh>,
+    pub fragment_uniform_world_pool: CpuBufferPool<fragment_shader::ty::DataWorld>,
+}
+
+impl<I> From<&GraphicsState> for InnerState<I>
+where
+    I: AssetStorageKey,
+{
+    fn from(
+        GraphicsState {
+            render_pass,
+            device,
+            ..
+        }: &GraphicsState,
+    ) -> Self {
+        Self {
+            pipeline: Arc::new(
+                GraphicsPipeline::start()
+                    .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
+                    .vertex_shader(
+                        vertex_shader::Shader::load(device.clone())
+                            .unwrap()
+                            .main_entry_point(),
+                        (),
+                    )
+                    .triangle_list()
+                    .viewports_dynamic_scissors_irrelevant(1)
+                    .fragment_shader(
+                        fragment_shader::Shader::load(device.clone())
+                            .unwrap()
+                            .main_entry_point(),
+                        (),
+                    )
+                    .depth_stencil_simple_depth()
+                    .cull_mode_back()
+                    .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+                    .build(device.clone())
+                    .unwrap(),
+            ),
+            vertex_uniform_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
+            fragment_uniform_mesh_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
+            fragment_uniform_world_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
+            buffered_meshes: Default::default(),
+        }
+    }
+}
+
+mod vertex_shader {
+    vulkano_shaders::shader! {
+        ty: "vertex",
+        path: "glsl/static_mesh_drawer.vert"
+    }
+}
+mod fragment_shader {
+    vulkano_shaders::shader! {
+        ty: "fragment",
+        path: "glsl/static_mesh_drawer.frag"
+    }
+}
 
 pub fn make_vertex_uniforms(
     projection: [[f32; 4]; 4],
@@ -38,7 +107,7 @@ pub fn make_mesh_fragment_uniforms(material: PhongMaterial) -> fragment_shader::
                 specular_power: specular_power.into(),
             },
         },
-        _ => unimplemented!("ColoredMeshDrawer is not supposed to render textured materials"),
+        PhongMaterial::Textured { .. } => todo!(),
     }
 }
 
