@@ -11,7 +11,20 @@ pub struct Texture2D {
 impl Texture2D {
     pub fn new(width: usize, height: usize, data: impl Into<Vec<u8>>) -> Self {
         Self {
-            data: ReadLock::from(data.into()),
+            data: ReadLock::from({
+                let data: Vec<u8> = data.into();
+                let mut data_buf = Vec::<u8>::default();
+                data_buf.reserve(width * height * 4);
+
+                for i in (0..height).rev() {
+                    let row = &data[(i * width * 4)..((i + 1) * width * 4)];
+                    for byte in row.iter() {
+                        data_buf.push(*byte);
+                    }
+                }
+
+                data_buf
+            }),
             width,
             height,
         }

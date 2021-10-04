@@ -358,8 +358,8 @@ fn window_size_dependent_setup(
     let dimensions = images[0].dimensions();
 
     let viewport = Viewport {
-        origin: [0.0, 0.0],
-        dimensions: [dimensions[0] as f32, dimensions[1] as f32],
+        origin: [0.0, dimensions[1] as f32],
+        dimensions: [dimensions[0] as f32, -(dimensions[1] as f32)],
         depth_range: 0.0..1.0,
     };
     dynamic_state.viewports = Some(vec![viewport]);

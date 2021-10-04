@@ -31,5 +31,4 @@ void main() {
   vert_color = color;
 
   gl_Position = uniforms.projection * vec4(view_position, 1.0);
-  gl_Position.y = -gl_Position.y;
 }

@@ -23,5 +23,4 @@ void main() {
   vert_texture = texture_coord;
   gl_Position = uniforms.projection *
                 vec4((uniforms.view * world * vec4(position, 0.0)).xyz, 1);
-  gl_Position.y = -gl_Position.y;
 }
