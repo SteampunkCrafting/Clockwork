@@ -1,6 +1,6 @@
 use self::inner_state::InnerState;
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::{graphics_state::GraphicsState, vulkano_layer::VulkanoLayer};
+use graphics::{state::GraphicsState, vulkano_layer::VulkanoLayer};
 use legion_ecs::{
     prelude::{component, IntoQuery},
     state::LegionState,
@@ -31,7 +31,7 @@ where
     fn draw(
         &mut self,
         engine_state: &S,
-        graphics_state: &graphics::graphics_state::GraphicsState,
+        graphics_state: &graphics::state::GraphicsState,
         command_buffer: &mut vulkano::command_buffer::AutoCommandBufferBuilder,
     ) {
         /* ---- LAZY INITIALIZATION ---- */

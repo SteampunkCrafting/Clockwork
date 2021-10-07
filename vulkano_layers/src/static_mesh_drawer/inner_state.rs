@@ -1,5 +1,5 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::graphics_state::GraphicsState;
+use graphics::state::GraphicsState;
 use physics::prelude::{nalgebra::Vector4, RigidBody};
 use scene_utils::components::{
     AmbientLight, Camera, DirectionalLight, PhongMaterial, PointLight, SpotLight,

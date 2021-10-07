@@ -1,4 +1,4 @@
-use graphics::graphics_state::GraphicsState;
+use graphics::state::GraphicsState;
 use scene_utils::{
     components::PhongMaterial, mesh::Mesh, mesh_vertex::TexturedVertex, prelude::TexturedMesh,
 };

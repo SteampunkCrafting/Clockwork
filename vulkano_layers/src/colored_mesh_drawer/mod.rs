@@ -10,8 +10,8 @@ use self::{
 use asset_storage::{asset_storage::AssetStorageKey, prelude::AssetStorage};
 use clockwork_core::clockwork::CallbackSubstate;
 use graphics::{
-    graphics_state::GraphicsState,
     prelude::VulkanoLayer,
+    state::GraphicsState,
     vulkano::{
         command_buffer::AutoCommandBufferBuilder,
         framebuffer::Subpass,

@@ -1,5 +1,5 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::graphics_state::GraphicsState;
+use graphics::state::GraphicsState;
 use scene_utils::components::{AmbientLight, PhongMaterial};
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
