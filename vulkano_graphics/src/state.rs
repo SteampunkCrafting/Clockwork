@@ -14,7 +14,7 @@ use vulkano::{
     sync::{self, GpuFuture},
 };
 use vulkano_win::VkSurfaceBuild;
-use winit::window::WindowBuilder;
+use winit::{dpi::PhysicalSize, window::WindowBuilder};
 
 pub struct GraphicsState {
     pub dynamic_state: DynamicState,
@@ -27,6 +27,7 @@ pub(crate) struct InternalMechanismState {
     pub swapchain: Arc<Swapchain<Window>>,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub recreate_swapchain: bool,
+    pub previous_size: PhysicalSize<u32>,
     pub framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
 }
 
@@ -74,7 +75,7 @@ where
 
     info!(
         "Rendering through device {:?} of type {:?}",
-        physical_device.name().clone(),
+        physical_device.name(),
         physical_device.ty()
     );
 
@@ -106,7 +107,7 @@ where
         let alpha = caps.supported_composite_alpha.iter().next().unwrap();
         let format = caps.supported_formats[0].0;
         let dimensions: [u32; 2] = surface.window().inner_size().into();
-        Swapchain::new(
+        let (swapchain, images) = Swapchain::new(
             device.clone(),
             surface.clone(),
             caps.min_image_count,
@@ -122,14 +123,24 @@ where
             true,
             ColorSpace::SrgbNonLinear,
         )
-        .unwrap()
+        .unwrap();
+        let images = images
+            .into_iter()
+            .map(|image| {
+                (
+                    image,
+                    AttachmentImage::transient(
+                        device.clone(),
+                        surface.window().inner_size().into(),
+                        Format::D16Unorm,
+                    )
+                    .unwrap(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        (swapchain, images)
     };
-    let depth_buffer = AttachmentImage::transient(
-        device.clone(),
-        surface.window().inner_size().into(),
-        Format::D16Unorm,
-    )
-    .unwrap();
 
     /* ---- STUFF TO ALLOCATE SOMEWHERE ELSE ---- */
     let render_pass = Arc::new(
@@ -157,16 +168,13 @@ where
     );
 
     let mut dynamic_state = DynamicState::none();
-    let framebuffers = window_size_dependent_setup(
-        &images,
-        &depth_buffer,
-        render_pass.clone(),
-        &mut dynamic_state,
-    );
+    let framebuffers =
+        window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
 
     /* ---- WRITING INTERNAL STATE ---- */
     (
         InternalMechanismState {
+            previous_size: swapchain.surface().window().inner_size(),
             swapchain,
             previous_frame_end: Some(sync::now(device.clone()).boxed()),
             recreate_swapchain: false,
@@ -181,13 +189,12 @@ where
     )
 }
 
-fn window_size_dependent_setup(
-    images: &[Arc<SwapchainImage<Window>>],
-    depth_image: &Arc<AttachmentImage>,
+pub(crate) fn window_size_dependent_setup(
+    images: &[(Arc<SwapchainImage<Window>>, Arc<AttachmentImage>)],
     render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
     dynamic_state: &mut DynamicState,
 ) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
-    let dimensions = images[0].dimensions();
+    let dimensions = images[0].0.dimensions();
 
     let viewport = Viewport {
         origin: [0.0, dimensions[1] as f32],
@@ -198,16 +205,17 @@ fn window_size_dependent_setup(
 
     images
         .iter()
-        .map(|image| {
+        .cloned()
+        .map(|(image, depth_image)| {
             Arc::new(
                 Framebuffer::start(render_pass.clone())
-                    .add(image.clone())
+                    .add(image)
                     .unwrap()
-                    .add(depth_image.clone())
+                    .add(depth_image)
                     .unwrap()
                     .build()
                     .unwrap(),
             ) as Arc<dyn FramebufferAbstract + Send + Sync>
         })
-        .collect::<Vec<_>>()
+        .collect()
 }

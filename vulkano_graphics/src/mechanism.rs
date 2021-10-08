@@ -1,5 +1,8 @@
 use crate::{
-    state::{init_vulkano, GraphicsState, InternalMechanismState, StateRequirements},
+    state::{
+        init_vulkano, window_size_dependent_setup, GraphicsState, InternalMechanismState,
+        StateRequirements,
+    },
     vulkano_layer::VulkanoLayer,
 };
 use clockwork_core::{clockwork::ClockworkState, prelude::Mechanism};
@@ -8,7 +11,9 @@ use main_loop::prelude::Event;
 use std::time::Duration;
 use vulkano::{
     command_buffer::AutoCommandBufferBuilder,
-    swapchain::{self, AcquireError},
+    format::Format,
+    image::AttachmentImage,
+    swapchain::{self, AcquireError, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
 };
 
@@ -106,6 +111,7 @@ fn draw<S>(
         previous_frame_end,
         recreate_swapchain,
         framebuffers,
+        previous_size,
     }: &mut InternalMechanismState,
     graphics_state: &mut GraphicsState,
 ) where
@@ -115,6 +121,38 @@ fn draw<S>(
     previous_frame_end.as_mut().unwrap().cleanup_finished();
 
     /* ---- HANDLING WINDOW RESIZE ---- */
+    if *recreate_swapchain {
+        // Get the new dimensions of the window.
+        let dimensions: [u32; 2] = swapchain.surface().window().inner_size().into();
+        let (new_swapchain, new_images) = match swapchain.recreate_with_dimensions(dimensions) {
+            Ok(r) => r,
+            Err(SwapchainCreationError::UnsupportedDimensions) => return,
+            Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
+        };
+        let new_images = new_images
+            .into_iter()
+            .map(|image| {
+                (
+                    image,
+                    AttachmentImage::transient(
+                        graphics_state.device.clone(),
+                        dimensions,
+                        Format::D16Unorm,
+                    )
+                    .unwrap(),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        *swapchain = new_swapchain;
+        *framebuffers = window_size_dependent_setup(
+            &new_images,
+            graphics_state.render_pass.clone(),
+            &mut graphics_state.dynamic_state,
+        );
+        *recreate_swapchain = false;
+    }
+
     let (image_num, suboptimal, acquire_future) =
         match swapchain::acquire_next_image(swapchain.clone(), None) {
             Ok(r) => r,
@@ -125,12 +163,9 @@ fn draw<S>(
             Err(e) => panic!("Failed to acquire next image: {:?}", e),
         };
 
-    if suboptimal {
+    if suboptimal || previous_size != &swapchain.surface().window().inner_size() {
+        *previous_size = swapchain.surface().window().inner_size();
         *recreate_swapchain = true;
-    }
-
-    if *recreate_swapchain {
-        todo!()
     }
 
     /* ---- DRAWING ---- */
