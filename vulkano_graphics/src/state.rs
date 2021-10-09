@@ -7,9 +7,9 @@ use vulkano::{
     format::Format,
     image::{view::ImageView, AttachmentImage, ImageUsage, SwapchainImage},
     instance::Instance,
-    pipeline::{viewport::Viewport, DynamicState},
+    pipeline::viewport::Viewport,
     render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
-    swapchain::{ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain},
+    swapchain::Swapchain,
     sync::{self, GpuFuture},
     Version,
 };

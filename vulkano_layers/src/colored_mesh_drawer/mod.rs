@@ -77,7 +77,6 @@ where
         >,
     ) {
         let GraphicsState {
-            viewport,
             render_pass,
             device,
             ..
