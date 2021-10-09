@@ -3,22 +3,22 @@ use log::{debug, info, trace};
 use main_loop::{prelude::Window, state::MainLoopState};
 use std::sync::Arc;
 use vulkano::{
-    command_buffer::DynamicState,
-    device::{Device, DeviceExtensions, Queue},
+    device::{physical::PhysicalDevice, Device, DeviceExtensions, Queue},
     format::Format,
-    framebuffer::{Framebuffer, FramebufferAbstract, RenderPassAbstract},
-    image::{AttachmentImage, ImageUsage, SwapchainImage},
-    instance::{Instance, PhysicalDevice},
-    pipeline::viewport::Viewport,
+    image::{view::ImageView, AttachmentImage, ImageUsage, SwapchainImage},
+    instance::Instance,
+    pipeline::{viewport::Viewport, DynamicState},
+    render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
     swapchain::{ColorSpace, FullscreenExclusive, PresentMode, SurfaceTransform, Swapchain},
     sync::{self, GpuFuture},
+    Version,
 };
 use vulkano_win::VkSurfaceBuild;
 use winit::{dpi::PhysicalSize, window::WindowBuilder};
 
 pub struct GraphicsState {
-    pub dynamic_state: DynamicState,
-    pub render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
+    pub viewport: Viewport,
+    pub render_pass: Arc<RenderPass>,
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
 }
@@ -42,6 +42,7 @@ where
     trace!("Creating Vulkan Instance");
     let instance = Instance::new(
         None,
+        Version::V1_1,
         &vulkano_win::required_extensions(),
         None,
     ).expect("Failed to create Vulkan instance\nCheck if Vulkan runtime is installed, and, if not, install it from https://vulkan.lunarg.com/sdk/home");
@@ -68,15 +69,15 @@ where
     debug!(
         "Available devices: {:?}",
         PhysicalDevice::enumerate(&instance)
-            .map(|d| d.name().to_string())
+            .map(|d| d.properties().device_name.clone())
             .collect::<Vec<_>>()
     );
     let physical_device = PhysicalDevice::enumerate(&instance).next().unwrap();
 
     info!(
         "Rendering through device {:?} of type {:?}",
-        physical_device.name(),
-        physical_device.ty()
+        physical_device.properties().device_name,
+        physical_device.properties().device_type,
     );
 
     /* ---- LOGICAL DEVICE, QUEUE ---- */
@@ -95,7 +96,7 @@ where
     let (device, mut queues) = Device::new(
         physical_device,
         physical_device.supported_features(),
-        &device_ext,
+        &physical_device.required_extensions().union(&device_ext),
         [(queue_family, 0.5)].iter().cloned(),
     )
     .unwrap();
@@ -107,23 +108,16 @@ where
         let alpha = caps.supported_composite_alpha.iter().next().unwrap();
         let format = caps.supported_formats[0].0;
         let dimensions: [u32; 2] = surface.window().inner_size().into();
-        let (swapchain, images) = Swapchain::new(
-            device.clone(),
-            surface.clone(),
-            caps.min_image_count,
-            format,
-            dimensions,
-            1,
-            ImageUsage::color_attachment(),
-            &queue,
-            SurfaceTransform::Identity,
-            alpha,
-            PresentMode::Fifo,
-            FullscreenExclusive::Default,
-            true,
-            ColorSpace::SrgbNonLinear,
-        )
-        .unwrap();
+        let (swapchain, images) = Swapchain::start(device.clone(), surface.clone())
+            .num_images(caps.min_image_count)
+            .format(format)
+            .dimensions(dimensions)
+            .usage(ImageUsage::color_attachment())
+            .sharing_mode(&queue)
+            .composite_alpha(alpha)
+            .build()
+            .unwrap();
+
         let images = images
             .into_iter()
             .map(|image| {
@@ -132,7 +126,7 @@ where
                     AttachmentImage::transient(
                         device.clone(),
                         surface.window().inner_size().into(),
-                        Format::D16Unorm,
+                        Format::D16_UNORM,
                     )
                     .unwrap(),
                 )
@@ -155,7 +149,7 @@ where
                 depth: {
                     load: Clear,
                     store: DontCare,
-                    format: Format::D16Unorm,
+                    format: Format::D16_UNORM,
                     samples: 1,
                 }
             },
@@ -167,9 +161,13 @@ where
         .unwrap(),
     );
 
-    let mut dynamic_state = DynamicState::none();
-    let framebuffers =
-        window_size_dependent_setup(&images, render_pass.clone(), &mut dynamic_state);
+    // let mut dynamic_state = DynamicState::none();
+    let mut viewport = Viewport {
+        origin: [0.0, 0.0],
+        dimensions: [0.0, 0.0],
+        depth_range: 0.0..1.0,
+    };
+    let framebuffers = window_size_dependent_setup(&images, render_pass.clone(), &mut viewport);
 
     /* ---- WRITING INTERNAL STATE ---- */
     (
@@ -181,7 +179,7 @@ where
             framebuffers,
         },
         GraphicsState {
-            dynamic_state,
+            viewport,
             render_pass,
             device,
             queue,
@@ -191,17 +189,15 @@ where
 
 pub(crate) fn window_size_dependent_setup(
     images: &[(Arc<SwapchainImage<Window>>, Arc<AttachmentImage>)],
-    render_pass: Arc<dyn RenderPassAbstract + Send + Sync>,
-    dynamic_state: &mut DynamicState,
+    render_pass: Arc<RenderPass>,
+    viewport: &mut Viewport,
 ) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
     let dimensions = images[0].0.dimensions();
-
-    let viewport = Viewport {
+    *viewport = Viewport {
         origin: [0.0, dimensions[1] as f32],
         dimensions: [dimensions[0] as f32, -(dimensions[1] as f32)],
         depth_range: 0.0..1.0,
     };
-    dynamic_state.viewports = Some(vec![viewport]);
 
     images
         .iter()
@@ -209,9 +205,9 @@ pub(crate) fn window_size_dependent_setup(
         .map(|(image, depth_image)| {
             Arc::new(
                 Framebuffer::start(render_pass.clone())
-                    .add(image)
+                    .add(ImageView::new(image).unwrap())
                     .unwrap()
-                    .add(depth_image)
+                    .add(ImageView::new(depth_image).unwrap())
                     .unwrap()
                     .build()
                     .unwrap(),

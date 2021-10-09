@@ -8,11 +8,10 @@ use std::{collections::HashMap, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuBufferPool},
     format::Format,
-    framebuffer::Subpass,
-    image::{ImmutableImage, MipmapsCount},
-    pipeline::{
-        vertex::OneVertexOneInstanceDefinition, GraphicsPipeline, GraphicsPipelineAbstract,
-    },
+    image::{ImageDimensions, ImmutableImage, MipmapsCount},
+    memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
+    pipeline::{vertex::BuffersDefinition, GraphicsPipeline},
+    render_pass::Subpass,
     sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
 };
 
@@ -25,12 +24,12 @@ where
     I: AssetStorageKey,
 {
     pub buffered_meshes: HashMap<I, BufferedMesh>,
-    pub pipeline: Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+    pub pipeline: Arc<GraphicsPipeline>,
     pub vertex_uniform_pool: CpuBufferPool<vertex_shader::ty::Data>,
     pub fragment_uniform_mesh_pool: CpuBufferPool<fragment_shader::ty::DataMesh>,
     pub fragment_uniform_world_pool: CpuBufferPool<fragment_shader::ty::DataWorld>,
     pub texture_sampler: Arc<Sampler>,
-    pub default_texture: Arc<ImmutableImage<Format>>,
+    pub default_texture: Arc<ImmutableImage<PotentialDedicatedAllocation<StdMemoryPoolAlloc>>>,
 }
 
 impl<I> From<&GraphicsState> for InnerState<I>
@@ -48,7 +47,11 @@ where
         Self {
             pipeline: Arc::new(
                 GraphicsPipeline::start()
-                    .vertex_input(OneVertexOneInstanceDefinition::<Vertex, InstanceData>::new())
+                    .vertex_input(
+                        BuffersDefinition::new()
+                            .vertex::<Vertex>()
+                            .instance::<InstanceData>(),
+                    )
                     .vertex_shader(
                         vertex_shader::Shader::load(device.clone())
                             .unwrap()
@@ -89,12 +92,13 @@ where
             .unwrap(),
             default_texture: ImmutableImage::from_iter(
                 vec![0f32, 0f32, 0f32, 0f32].iter().cloned(),
-                vulkano::image::Dimensions::Dim2d {
+                ImageDimensions::Dim2d {
                     width: 1,
                     height: 1,
+                    array_layers: 1,
                 },
                 MipmapsCount::One,
-                Format::R8G8B8A8Srgb,
+                Format::R8G8B8A8_SRGB,
                 queue.clone(),
             )
             .unwrap()

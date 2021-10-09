@@ -9,7 +9,7 @@ package = "spc_clockwork_core"
 path = "../core"
 
 [dependencies]
-winit = "0.24.0"
+winit = "0.25.0"
 log = "0.4.14"
 getset = "0.1.1"
 derive_builder = "0.10.0"

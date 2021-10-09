@@ -12,13 +12,7 @@ use clockwork_core::clockwork::CallbackSubstate;
 use graphics::{
     prelude::VulkanoLayer,
     state::GraphicsState,
-    vulkano::{
-        command_buffer::AutoCommandBufferBuilder,
-        framebuffer::Subpass,
-        pipeline::{
-            vertex::OneVertexOneInstanceDefinition, GraphicsPipeline, GraphicsPipelineAbstract,
-        },
-    },
+    vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::GraphicsPipeline},
 };
 use legion_ecs::{prelude::*, state::LegionState};
 use physics::state::PhysicsState;
@@ -29,8 +23,11 @@ use scene_utils::{
 use std::{collections::HashMap, sync::Arc};
 pub use util::{CameraEntity, DrawMarker, DrawableEntity};
 use vulkano::{
-    buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool},
-    descriptor::descriptor_set::PersistentDescriptorSet,
+    buffer::{BufferUsage, CpuAccessibleBuffer, CpuBufferPool, TypedBufferAccess},
+    command_buffer::{pool::standard::StandardCommandPoolAlloc, PrimaryAutoCommandBuffer},
+    descriptor_set::PersistentDescriptorSet,
+    pipeline::vertex::BuffersDefinition,
+    render_pass::Subpass,
 };
 
 mod buffered_mesh;
@@ -53,7 +50,7 @@ mod fragment_shader {
 
 pub struct ColoredMeshDrawer<I>(
     Option<(
-        Arc<dyn GraphicsPipelineAbstract + Send + Sync>,
+        Arc<GraphicsPipeline>,
         CpuBufferPool<vertex_shader::ty::Data>,
         CpuBufferPool<fragment_shader::ty::DataMesh>,
         CpuBufferPool<fragment_shader::ty::DataWorld>,
@@ -75,10 +72,12 @@ where
         &mut self,
         state: &S,
         graphics_state: &GraphicsState,
-        command_buffer: &mut AutoCommandBufferBuilder,
+        command_buffer: &mut AutoCommandBufferBuilder<
+            PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>,
+        >,
     ) {
         let GraphicsState {
-            dynamic_state,
+            viewport,
             render_pass,
             device,
             ..
@@ -93,11 +92,11 @@ where
                                 *inner_state = Some((
                                     Arc::new(
                                         GraphicsPipeline::start()
-                                            .vertex_input(OneVertexOneInstanceDefinition::<
-                                                Vertex,
-                                                InstanceData,
-                                            >::new(
-                                            ))
+                                            .vertex_input(
+                                                BuffersDefinition::new()
+                                                    .vertex::<Vertex>()
+                                                    .instance::<InstanceData>(),
+                                            )
                                             .vertex_shader(
                                                 vertex_shader::Shader::load(device.clone())
                                                     .unwrap()
@@ -164,28 +163,38 @@ where
                                 };
 
                                 /* ---- UNIFORM SETUP ---- */
-                                let vertex_set = Arc::new(
-                                    PersistentDescriptorSet::start(
-                                        pipeline.descriptor_set_layout(0).unwrap().clone(),
-                                    )
-                                    .add_buffer(
+                                let vertex_set = {
+                                    let mut set = PersistentDescriptorSet::start(
+                                        pipeline
+                                            .layout()
+                                            .clone()
+                                            .descriptor_set_layouts()
+                                            .get(0)
+                                            .unwrap()
+                                            .clone(),
+                                    );
+                                    set.add_buffer(Arc::new(
                                         vertex_uniform_buffer
                                             .next(make_vertex_uniforms(
                                                 projection_matrix,
                                                 view_matrix,
                                             ))
                                             .unwrap(),
-                                    )
-                                    .unwrap()
-                                    .build()
-                                    .unwrap(),
-                                );
+                                    ))
+                                    .unwrap();
+                                    Arc::new(set.build().unwrap())
+                                };
 
-                                let world_fragment_set = Arc::new(
-                                    PersistentDescriptorSet::start(
-                                        pipeline.descriptor_set_layout(1).unwrap().clone(),
-                                    )
-                                    .add_buffer(
+                                let world_fragment_set = {
+                                    let mut set = PersistentDescriptorSet::start(
+                                        pipeline
+                                            .layout()
+                                            .descriptor_set_layouts()
+                                            .get(1)
+                                            .unwrap()
+                                            .clone(),
+                                    );
+                                    set.add_buffer(Arc::new(
                                         fragment_world_uniform_buffer
                                             .next(make_world_fragment_uniforms(
                                                 (camera.clone(), camera_body.clone()),
@@ -214,11 +223,10 @@ where
                                                     .collect(),
                                             ))
                                             .unwrap(),
-                                    )
-                                    .unwrap()
-                                    .build()
-                                    .unwrap(),
-                                );
+                                    ))
+                                    .unwrap();
+                                    Arc::new(set.build().unwrap())
+                                };
 
                                 /* ---- RENDERING ---- */
                                 for (mesh_id, instances) in instanced_data {
@@ -228,42 +236,57 @@ where
                                             (device.clone(), &*meshes.get(mesh_id.clone()).lock())
                                                 .into()
                                         });
-                                    let mesh_fragment_set = Arc::new(
-                                        PersistentDescriptorSet::start(
-                                            pipeline.descriptor_set_layout(2).unwrap().clone(),
-                                        )
-                                        .add_buffer(
+                                    let mesh_fragment_set = {
+                                        let mut set = PersistentDescriptorSet::start(
+                                            pipeline
+                                                .layout()
+                                                .descriptor_set_layouts()
+                                                .get(2)
+                                                .unwrap()
+                                                .clone(),
+                                        );
+                                        set.add_buffer(Arc::new(
                                             fragment_mesh_uniform_buffer
                                                 .next(make_mesh_fragment_uniforms(
                                                     materials.get(mesh_id.clone()).lock().clone(),
                                                 ))
                                                 .unwrap(),
-                                        )
-                                        .unwrap()
-                                        .build()
-                                        .unwrap(),
-                                    );
+                                        ))
+                                        .unwrap();
+                                        Arc::new(set.build().unwrap())
+                                    };
                                     command_buffer
-                                        .draw_indexed(
-                                            pipeline.clone(),
-                                            dynamic_state,
-                                            vec![
-                                                vertices.clone(),
-                                                CpuAccessibleBuffer::from_iter(
-                                                    device.clone(),
-                                                    BufferUsage::all(),
-                                                    false,
-                                                    instances.into_iter(),
-                                                )
-                                                .unwrap(),
-                                            ],
-                                            indices.clone(),
+                                        .bind_pipeline_graphics(pipeline.clone())
+                                        .bind_descriptor_sets(
+                                            vulkano::pipeline::PipelineBindPoint::Graphics,
+                                            pipeline.layout().clone(),
+                                            0,
                                             (
                                                 vertex_set.clone(),
                                                 world_fragment_set.clone(),
                                                 mesh_fragment_set.clone(),
                                             ),
-                                            (),
+                                        )
+                                        .bind_vertex_buffers(
+                                            0,
+                                            (
+                                                vertices.clone(),
+                                                CpuAccessibleBuffer::from_iter(
+                                                    device.clone(),
+                                                    BufferUsage::all(),
+                                                    false,
+                                                    instances.iter().cloned(),
+                                                )
+                                                .unwrap(),
+                                            ),
+                                        )
+                                        .bind_index_buffer(indices.clone())
+                                        .draw_indexed(
+                                            indices.len() as u32,
+                                            instances.len() as u32,
+                                            0,
+                                            0,
+                                            0,
                                         )
                                         .unwrap();
                                 }

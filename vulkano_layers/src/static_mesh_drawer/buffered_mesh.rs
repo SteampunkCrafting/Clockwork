@@ -6,13 +6,14 @@ use std::sync::Arc;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
     format::Format,
-    image::{Dimensions, ImmutableImage, MipmapsCount},
+    image::{ImageDimensions, ImmutableImage, MipmapsCount},
+    memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
 };
 
 pub struct BufferedMesh {
     pub vertices: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pub indices: Arc<CpuAccessibleBuffer<[u32]>>,
-    pub texture: Option<Arc<ImmutableImage<Format>>>,
+    pub texture: Option<Arc<ImmutableImage<PotentialDedicatedAllocation<StdMemoryPoolAlloc>>>>,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -54,15 +55,16 @@ impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
                 PhongMaterial::Colored { .. } => None,
                 PhongMaterial::Textured { texture, .. } => {
                     let (texture, _) = {
-                        let dimensions = Dimensions::Dim2d {
+                        let dimensions = ImageDimensions::Dim2d {
                             width: texture.width() as u32,
                             height: texture.height() as u32,
+                            array_layers: 1,
                         };
                         ImmutableImage::from_iter(
                             texture.data_lock().lock().iter().cloned(),
                             dimensions,
                             MipmapsCount::One,
-                            Format::R8G8B8A8Srgb,
+                            Format::R8G8B8A8_SRGB,
                             queue.clone(),
                         )
                         .unwrap()

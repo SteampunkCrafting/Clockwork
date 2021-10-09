@@ -10,7 +10,7 @@ use log::*;
 use main_loop::prelude::Event;
 use std::time::Duration;
 use vulkano::{
-    command_buffer::AutoCommandBufferBuilder,
+    command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage},
     format::Format,
     image::AttachmentImage,
     swapchain::{self, AcquireError, SwapchainCreationError},
@@ -124,7 +124,8 @@ fn draw<S>(
     if *recreate_swapchain {
         // Get the new dimensions of the window.
         let dimensions: [u32; 2] = swapchain.surface().window().inner_size().into();
-        let (new_swapchain, new_images) = match swapchain.recreate_with_dimensions(dimensions) {
+        let (new_swapchain, new_images) = match swapchain.recreate().dimensions(dimensions).build()
+        {
             Ok(r) => r,
             Err(SwapchainCreationError::UnsupportedDimensions) => return,
             Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
@@ -137,7 +138,7 @@ fn draw<S>(
                     AttachmentImage::transient(
                         graphics_state.device.clone(),
                         dimensions,
-                        Format::D16Unorm,
+                        Format::D16_UNORM,
                     )
                     .unwrap(),
                 )
@@ -148,7 +149,7 @@ fn draw<S>(
         *framebuffers = window_size_dependent_setup(
             &new_images,
             graphics_state.render_pass.clone(),
-            &mut graphics_state.dynamic_state,
+            &mut graphics_state.viewport,
         );
         *recreate_swapchain = false;
     }
@@ -171,12 +172,14 @@ fn draw<S>(
     /* ---- DRAWING ---- */
     /* -- BUILDING COMMAND BUFFER --  */
     let command_buffer = {
-        let mut builder = AutoCommandBufferBuilder::primary_one_time_submit(
+        let mut builder = AutoCommandBufferBuilder::primary(
             graphics_state.device.clone(),
             graphics_state.queue.family(),
+            CommandBufferUsage::OneTimeSubmit,
         )
         .unwrap();
         builder
+            .set_viewport(0, [graphics_state.viewport.clone()])
             .begin_render_pass(
                 framebuffers[image_num].clone(),
                 vulkano::command_buffer::SubpassContents::Inline,
