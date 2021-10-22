@@ -40,16 +40,12 @@ where
             PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>,
         >,
     ) {
-        /* ---- LAZY INITIALIZATION ---- */
-
-        /* ---- STATE DESTRUCTURING ---- */
-
-        /* ---- GETTING ENGINE STATE AND DRAWING ---- */
         engine_state.callback_substate(|LegionState { world, .. }| {
             engine_state.callback_substate(|meshes: &TexturedMeshStorage<I>| {
                 engine_state.callback_substate(|materials: &PhongMaterialStorage<I>| {
                     engine_state.callback_substate(|PhysicsState { bodies, .. }: &PhysicsState| {
                         engine_state.callback_substate(|graphics_state: &Option<GraphicsState>| {
+                            /* ---- LAZY INITIALIZATION ---- */
                             let graphics_state = graphics_state.as_ref().unwrap();
                             let InnerState {
                                 buffered_meshes,
@@ -61,6 +57,7 @@ where
                                 default_texture,
                             } = self.0.get_or_insert_with(|| graphics_state.into());
 
+                            /* ---- RENDERING ---- */
                             if let Some((camera, cam_body_handle)) =
                                 <(&Camera, &RigidBodyHandle)>::query()
                                     .filter(component::<DrawMarker>())
