@@ -7,17 +7,16 @@ use vulkano::{
     format::Format,
     image::{view::ImageView, AttachmentImage, ImageUsage, SwapchainImage},
     instance::Instance,
-    pipeline::viewport::Viewport,
     render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
-    swapchain::Swapchain,
+    swapchain::{Surface, Swapchain},
     sync::{self, GpuFuture},
     Version,
 };
 use vulkano_win::VkSurfaceBuild;
-use winit::{dpi::PhysicalSize, window::WindowBuilder};
+use winit::window::WindowBuilder;
 
 pub struct GraphicsState {
-    pub viewport: Viewport,
+    pub surface: Arc<Surface<Window>>,
     pub render_pass: Arc<RenderPass>,
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
@@ -27,12 +26,17 @@ pub(crate) struct InternalMechanismState {
     pub swapchain: Arc<Swapchain<Window>>,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub recreate_swapchain: bool,
-    pub previous_size: PhysicalSize<u32>,
     pub framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
 }
 
-pub trait StateRequirements: CallbackSubstate<MainLoopState> + ClockworkState {}
-impl<T> StateRequirements for T where T: CallbackSubstate<MainLoopState> + ClockworkState {}
+pub trait StateRequirements:
+    CallbackSubstate<MainLoopState> + CallbackSubstate<Option<GraphicsState>> + ClockworkState
+{
+}
+impl<T> StateRequirements for T where
+    T: CallbackSubstate<MainLoopState> + CallbackSubstate<Option<GraphicsState>> + ClockworkState
+{
+}
 
 pub(crate) fn init_vulkano<S>(engine_state: &S) -> (InternalMechanismState, GraphicsState)
 where
@@ -160,26 +164,18 @@ where
         )
         .unwrap(),
     );
-
-    // let mut dynamic_state = DynamicState::none();
-    let mut viewport = Viewport {
-        origin: [0.0, 0.0],
-        dimensions: [0.0, 0.0],
-        depth_range: 0.0..1.0,
-    };
-    let framebuffers = window_size_dependent_setup(&images, render_pass.clone(), &mut viewport);
+    let framebuffers = window_size_dependent_setup(&images, render_pass.clone());
 
     /* ---- WRITING INTERNAL STATE ---- */
     (
         InternalMechanismState {
-            previous_size: swapchain.surface().window().inner_size(),
-            swapchain,
+            swapchain: swapchain.clone(),
             previous_frame_end: Some(sync::now(device.clone()).boxed()),
             recreate_swapchain: false,
             framebuffers,
         },
         GraphicsState {
-            viewport,
+            surface: swapchain.surface().clone(),
             render_pass,
             device,
             queue,
@@ -190,15 +186,7 @@ where
 pub(crate) fn window_size_dependent_setup(
     images: &[(Arc<SwapchainImage<Window>>, Arc<AttachmentImage>)],
     render_pass: Arc<RenderPass>,
-    viewport: &mut Viewport,
 ) -> Vec<Arc<dyn FramebufferAbstract + Send + Sync>> {
-    let dimensions = images[0].0.dimensions();
-    *viewport = Viewport {
-        origin: [0.0, dimensions[1] as f32],
-        dimensions: [dimensions[0] as f32, -(dimensions[1] as f32)],
-        depth_range: 0.0..1.0,
-    };
-
     images
         .iter()
         .cloned()

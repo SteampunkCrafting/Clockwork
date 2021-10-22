@@ -1,17 +1,19 @@
 use crate::state::GraphicsState;
-use clockwork_core::clockwork::ClockworkState;
+use clockwork_core::clockwork::CallbackSubstate;
 use vulkano::command_buffer::{
     pool::standard::StandardCommandPoolAlloc, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };
 
+pub trait StateRequirements: CallbackSubstate<Option<GraphicsState>> {}
+impl<T> StateRequirements for T where T: CallbackSubstate<Option<GraphicsState>> {}
+
 pub trait VulkanoLayer<S>
 where
-    S: ClockworkState,
+    S: StateRequirements,
 {
     fn draw(
         &mut self,
-        engine_state: &S,
-        graphics_state: &GraphicsState,
+        state: &S,
         command_buffer: &mut AutoCommandBufferBuilder<
             PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>,
         >,
@@ -20,21 +22,16 @@ where
 
 impl<T, S> VulkanoLayer<S> for T
 where
-    T: FnMut(
-        &S,
-        &GraphicsState,
-        &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>>,
-    ),
-    S: ClockworkState,
+    T: FnMut(&S, &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>>),
+    S: StateRequirements,
 {
     fn draw(
         &mut self,
-        engine_state: &S,
-        graphics_state: &GraphicsState,
+        state: &S,
         command_buffer: &mut AutoCommandBufferBuilder<
             PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>,
         >,
     ) {
-        self(engine_state, graphics_state, command_buffer)
+        self(state, command_buffer)
     }
 }

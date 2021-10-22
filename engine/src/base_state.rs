@@ -2,6 +2,7 @@ use asset_storage::asset_storage::AssetStorageKey;
 use clockwork_core::clockwork::{CallbackSubstate, Substate};
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
+use graphics::prelude::GraphicsState;
 use main_loop::{prelude::IOState, state::MainLoopState};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
@@ -30,6 +31,8 @@ where
     main_loop_state: MainLoopState,
 
     assets: Assets<C>,
+
+    graphics_state: Option<GraphicsState>,
 }
 
 impl<C> Assets<C>
@@ -61,6 +64,7 @@ where
             ecs: LegionState::default(),
             assets: assets.ok_or("Missing assets")?,
             main_loop_state: Default::default(),
+            graphics_state: None,
         };
         let BaseState {
             ecs: LegionState { resources, .. },
@@ -75,6 +79,19 @@ where
 
         /* ---- RETURNING ---- */
         Ok(base_state)
+    }
+}
+
+impl<C> Substate<Option<GraphicsState>> for BaseState<C>
+where
+    C: AssetStorageKey,
+{
+    fn substate(&self) -> &Option<GraphicsState> {
+        &self.graphics_state
+    }
+
+    fn substate_mut(&mut self) -> &mut Option<GraphicsState> {
+        &mut self.graphics_state
     }
 }
 
