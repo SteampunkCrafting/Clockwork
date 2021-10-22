@@ -225,11 +225,11 @@ fn draw<S>(
             .next_subpass(SubpassContents::SecondaryCommandBuffers)
             .unwrap();
 
+        let mut cb = None;
         CallbackSubstate::<Option<Gui>>::callback_substate_mut(state, |gui| {
-            builder
-                .execute_commands(gui.as_mut().unwrap().draw_on_subpass_image([width, height]))
-                .unwrap();
+            cb = Some(gui.as_mut().unwrap().draw_on_subpass_image([width, height]));
         });
+        builder.execute_commands(cb.unwrap()).unwrap();
 
         builder.end_render_pass().unwrap();
         builder
@@ -238,16 +238,19 @@ fn draw<S>(
     };
 
     /* -- SUBMITTING COMMAND BUFFER -- */
-    let future = previous_frame_end
+    *previous_frame_end = match previous_frame_end
         .take()
         .unwrap()
         .join(acquire_future)
         .then_execute(queue.clone(), command_buffer)
         .unwrap()
         .then_swapchain_present(queue.clone(), swapchain.clone(), image_num)
-        .then_signal_fence_and_flush();
-    *previous_frame_end = match future {
-        Ok(future) => Some(future.boxed()),
+        .then_signal_fence_and_flush()
+    {
+        Ok(future) => {
+            future.wait(None).unwrap();
+            Some(future.boxed())
+        }
         Err(FlushError::OutOfDate) => {
             *recreate_swapchain = true;
             Some(sync::now(device.clone()).boxed())

@@ -64,7 +64,7 @@ impl IOStateBuilder {
 impl Default for IOState {
     fn default() -> Self {
         Self::builder()
-            .with_desired_max_fps(90f32)
+            .with_desired_max_fps(60f32)
             .with_desired_tps(60f32)
             .build()
             .unwrap()
