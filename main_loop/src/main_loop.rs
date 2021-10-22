@@ -30,13 +30,13 @@ where
     info!("Finished initializing mechanisms");
 
     /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
-    info!("Retreiving event loop object from the engine state");
+    info!("Retrieving event loop object from the engine state");
     let event_loop = {
         let mut event_loop = None;
         state.callback_substate_mut(|MainLoopState(el)| event_loop = el.take());
         event_loop.unwrap()
     };
-    info!("Done retreiving event loop object from the engine state");
+    info!("Done retrieving event loop object from the engine state");
 
     /* ---- EVENT LOOP LAUNCH ---- */
     info!("Starting main loop");
