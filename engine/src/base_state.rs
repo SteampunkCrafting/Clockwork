@@ -33,9 +33,6 @@ where
     assets: Assets<C>,
 
     graphics_state: Option<GraphicsState>,
-
-    #[builder(setter(skip))]
-    gui_state: Option<Gui>,
 }
 
 impl<C> Assets<C>
@@ -68,7 +65,6 @@ where
             assets: assets.ok_or("Missing assets")?,
             main_loop_state: Default::default(),
             graphics_state: None,
-            gui_state: None,
         };
         let BaseState {
             ecs: LegionState { resources, .. },
@@ -80,6 +76,9 @@ where
 
         /* ---- INITIALIZING IO ---- */
         resources.insert(IOState::default());
+
+        /* ---- INITIALIZING GUI ---- */
+        resources.insert(Option::<Gui>::None);
 
         /* ---- RETURNING ---- */
         Ok(base_state)
@@ -206,15 +205,15 @@ where
     }
 }
 
-impl<C> Substate<Option<Gui>> for BaseState<C>
+impl<C> CallbackSubstate<Option<Gui>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &Option<Gui> {
-        &self.gui_state
+    fn callback_substate(&self, callback: impl FnOnce(&Option<Gui>)) {
+        callback(&self.ecs.resources.get().unwrap())
     }
 
-    fn substate_mut(&mut self) -> &mut Option<Gui> {
-        &mut self.gui_state
+    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut Option<Gui>)) {
+        callback(&mut self.ecs.resources.get_mut().unwrap())
     }
 }
