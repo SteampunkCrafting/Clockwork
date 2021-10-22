@@ -7,7 +7,12 @@ pub use vulkano_shaders;
 pub use vulkano_win;
 
 pub mod prelude {
+    pub use crate::gui::Gui;
     pub use crate::mechanism::VulkanoGraphics;
     pub use crate::state::GraphicsState;
     pub use crate::vulkano_layer::VulkanoLayer;
+}
+
+pub mod gui {
+    pub use egui_winit_vulkano::*;
 }

@@ -1,4 +1,5 @@
 use clockwork_core::clockwork::{CallbackSubstate, ClockworkState};
+use egui_winit_vulkano::Gui;
 use log::{debug, info, trace};
 use main_loop::{prelude::Window, state::MainLoopState};
 use std::sync::Arc;
@@ -7,7 +8,7 @@ use vulkano::{
     format::Format,
     image::{view::ImageView, AttachmentImage, ImageUsage, SwapchainImage},
     instance::Instance,
-    render_pass::{Framebuffer, FramebufferAbstract, RenderPass},
+    render_pass::{Framebuffer, FramebufferAbstract, RenderPass, Subpass},
     swapchain::{Surface, Swapchain},
     sync::{self, GpuFuture},
     Version,
@@ -30,15 +31,21 @@ pub(crate) struct InternalMechanismState {
 }
 
 pub trait StateRequirements:
-    CallbackSubstate<MainLoopState> + CallbackSubstate<Option<GraphicsState>> + ClockworkState
+    CallbackSubstate<MainLoopState>
+    + CallbackSubstate<Option<GraphicsState>>
+    + CallbackSubstate<Option<Gui>>
+    + ClockworkState
 {
 }
 impl<T> StateRequirements for T where
-    T: CallbackSubstate<MainLoopState> + CallbackSubstate<Option<GraphicsState>> + ClockworkState
+    T: CallbackSubstate<MainLoopState>
+        + CallbackSubstate<Option<GraphicsState>>
+        + CallbackSubstate<Option<Gui>>
+        + ClockworkState
 {
 }
 
-pub(crate) fn init_vulkano<S>(engine_state: &S) -> (InternalMechanismState, GraphicsState)
+pub(crate) fn init_vulkano<S>(engine_state: &S) -> (InternalMechanismState, GraphicsState, Gui)
 where
     S: StateRequirements,
 {
@@ -142,7 +149,8 @@ where
 
     /* ---- STUFF TO ALLOCATE SOMEWHERE ELSE ---- */
     let render_pass = Arc::new(
-        vulkano::single_pass_renderpass!(device.clone(),
+        vulkano::ordered_passes_renderpass!(
+            device.clone(),
             attachments: {
                 color: {
                     load: Clear,
@@ -157,14 +165,25 @@ where
                     samples: 1,
                 }
             },
-            pass: {
-                color: [color],
-                depth_stencil: {depth}
-            }
+            passes: [
+                // Normal render pass
+                { color: [color], depth_stencil: {depth}, input: [] },
+
+                // eGUI render pass
+                { color: [color], depth_stencil: {}, input: [] }
+            ]
         )
         .unwrap(),
     );
     let framebuffers = window_size_dependent_setup(&images, render_pass.clone());
+
+    /* ---- GUI ---- */
+    let mut gui = Gui::new_with_subpass(
+        surface.clone(),
+        queue.clone(),
+        Subpass::from(render_pass.clone(), 1).unwrap(),
+    );
+    gui.immediate_ui(|_| {});
 
     /* ---- WRITING INTERNAL STATE ---- */
     (
@@ -176,10 +195,11 @@ where
         },
         GraphicsState {
             surface: swapchain.surface().clone(),
-            render_pass,
+            render_pass: render_pass.clone(),
+            queue: queue.clone(),
             device,
-            queue,
         },
+        gui,
     )
 }
 

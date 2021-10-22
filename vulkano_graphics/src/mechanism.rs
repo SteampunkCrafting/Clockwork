@@ -9,11 +9,12 @@ use clockwork_core::{
     clockwork::{CallbackSubstate, ClockworkState},
     prelude::Mechanism,
 };
+use egui_winit_vulkano::Gui;
 use log::*;
 use main_loop::prelude::Event;
 use std::time::Duration;
 use vulkano::{
-    command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage},
+    command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
     format::Format,
     image::AttachmentImage,
     pipeline::viewport::Viewport,
@@ -95,10 +96,13 @@ where
                 },
             ) => {
                 info!("Initializing Vulkano Graphics");
-                let (internal, graphics_state) = init_vulkano(state);
+                let (internal, graphics_state, gui) = init_vulkano(state);
                 *inner = Some(internal);
                 CallbackSubstate::<Option<GraphicsState>>::callback_substate_mut(state, |gs| {
                     *gs = Some(graphics_state);
+                });
+                CallbackSubstate::<Option<Gui>>::callback_substate_mut(state, |gs| {
+                    *gs = Some(gui);
                 });
                 info!("Done initializing Vulkano Graphics");
             }
@@ -113,7 +117,7 @@ where
 
 /// Draws on the window by means of activating VulkanoLayers
 fn draw<S>(
-    state: &S,
+    state: &mut S,
     layers: &mut Vec<Box<dyn VulkanoLayer<S>>>,
     InternalMechanismState {
         swapchain,
@@ -124,111 +128,130 @@ fn draw<S>(
 ) where
     S: StateRequirements,
 {
-    CallbackSubstate::<Option<GraphicsState>>::callback_substate(state, |graphics_state| {
-        let graphics_state = graphics_state.as_ref().unwrap();
-        /* ---- GARBAGE COLLECTING ---- */
-        previous_frame_end.as_mut().unwrap().cleanup_finished();
+    let (surface, render_pass, device, queue) = {
+        let mut x = None;
+        CallbackSubstate::<Option<GraphicsState>>::callback_substate(state, |gs| {
+            let GraphicsState {
+                surface,
+                render_pass,
+                device,
+                queue,
+            } = gs.as_ref().unwrap();
+            x = Some((
+                surface.clone(),
+                render_pass.clone(),
+                device.clone(),
+                queue.clone(),
+            ));
+        });
+        x.unwrap()
+    };
 
-        /* ---- HANDLING WINDOW RESIZE ---- */
-        if *recreate_swapchain {
-            // Get the new dimensions of the window.
-            let dimensions: [u32; 2] = swapchain.surface().window().inner_size().into();
-            let (new_swapchain, new_images) =
-                match swapchain.recreate().dimensions(dimensions).build() {
-                    Ok(r) => r,
-                    Err(SwapchainCreationError::UnsupportedDimensions) => return,
-                    Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
-                };
-            let new_images = new_images
-                .into_iter()
-                .map(|image| {
-                    (
-                        image,
-                        AttachmentImage::transient(
-                            graphics_state.device.clone(),
-                            dimensions,
-                            Format::D16_UNORM,
-                        )
+    /* ---- GARBAGE COLLECTING ---- */
+    previous_frame_end.as_mut().unwrap().cleanup_finished();
+
+    /* ---- HANDLING WINDOW RESIZE ---- */
+    if *recreate_swapchain {
+        // Get the new dimensions of the window.
+        let dimensions: [u32; 2] = swapchain.surface().window().inner_size().into();
+        let (new_swapchain, new_images) = match swapchain.recreate().dimensions(dimensions).build()
+        {
+            Ok(r) => r,
+            Err(SwapchainCreationError::UnsupportedDimensions) => return,
+            Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
+        };
+        let new_images = new_images
+            .into_iter()
+            .map(|image| {
+                (
+                    image,
+                    AttachmentImage::transient(device.clone(), dimensions, Format::D16_UNORM)
                         .unwrap(),
-                    )
-                })
-                .collect::<Vec<_>>();
+                )
+            })
+            .collect::<Vec<_>>();
 
-            *swapchain = new_swapchain;
-            *framebuffers =
-                window_size_dependent_setup(&new_images, graphics_state.render_pass.clone());
-            *recreate_swapchain = false;
-        }
+        *swapchain = new_swapchain;
+        *framebuffers = window_size_dependent_setup(&new_images, render_pass.clone());
+        *recreate_swapchain = false;
+    }
 
-        let (image_num, suboptimal, acquire_future) =
-            match swapchain::acquire_next_image(swapchain.clone(), None) {
-                Ok(r) => r,
-                Err(AcquireError::OutOfDate) => {
-                    *recreate_swapchain = true;
-                    return;
-                }
-                Err(e) => panic!("Failed to acquire next image: {:?}", e),
-            };
+    let (image_num, suboptimal, acquire_future) =
+        match swapchain::acquire_next_image(swapchain.clone(), None) {
+            Ok(r) => r,
+            Err(AcquireError::OutOfDate) => {
+                *recreate_swapchain = true;
+                return;
+            }
+            Err(e) => panic!("Failed to acquire next image: {:?}", e),
+        };
 
-        if suboptimal {
-            *recreate_swapchain = true
-        }
+    if suboptimal {
+        *recreate_swapchain = true
+    }
 
-        /* ---- DRAWING ---- */
-        /* -- BUILDING COMMAND BUFFER --  */
-        let command_buffer = {
-            let mut builder = AutoCommandBufferBuilder::primary(
-                graphics_state.device.clone(),
-                graphics_state.queue.family(),
-                CommandBufferUsage::OneTimeSubmit,
+    /* ---- DRAWING ---- */
+    let PhysicalSize { width, height } = surface.window().inner_size();
+
+    /* -- BUILDING COMMAND BUFFER --  */
+    let command_buffer = {
+        let mut builder = AutoCommandBufferBuilder::primary(
+            device.clone(),
+            queue.family(),
+            CommandBufferUsage::OneTimeSubmit,
+        )
+        .unwrap();
+        builder
+            .set_viewport(
+                0,
+                [Viewport {
+                    origin: [0.0, height as f32],
+                    dimensions: [width as f32, -(height as f32)],
+                    depth_range: 0.0..1.0,
+                }],
+            )
+            .begin_render_pass(
+                framebuffers[image_num].clone(),
+                vulkano::command_buffer::SubpassContents::Inline,
+                vec![[0.0, 0.0, 0.0].into(), 1f32.into()],
             )
             .unwrap();
+
+        for layer in layers {
+            layer.draw(state, &mut builder);
+        }
+
+        builder
+            .next_subpass(SubpassContents::SecondaryCommandBuffers)
+            .unwrap();
+
+        CallbackSubstate::<Option<Gui>>::callback_substate_mut(state, |gui| {
             builder
-                .set_viewport(
-                    0,
-                    [{
-                        let PhysicalSize { width, height } =
-                            graphics_state.surface.window().inner_size();
-                        Viewport {
-                            origin: [0.0, height as f32],
-                            dimensions: [width as f32, -(height as f32)],
-                            depth_range: 0.0..1.0,
-                        }
-                    }],
-                )
-                .begin_render_pass(
-                    framebuffers[image_num].clone(),
-                    vulkano::command_buffer::SubpassContents::Inline,
-                    vec![[0.0, 0.0, 0.0].into(), 1f32.into()],
-                )
+                .execute_commands(gui.as_mut().unwrap().draw_on_subpass_image([width, height]))
                 .unwrap();
+        });
 
-            for layer in layers {
-                layer.draw(state, &mut builder);
-            }
+        builder.end_render_pass().unwrap();
+        builder
+            .build()
+            .expect("Failed to construct Vulkan command buffer")
+    };
 
-            builder.end_render_pass().unwrap();
-            builder
-                .build()
-                .expect("Failed to construct Vulkan command buffer")
-        };
-
-        /* -- SUBMITTING COMMAND BUFFER -- */
-        let future = previous_frame_end
-            .take()
-            .unwrap()
-            .join(acquire_future)
-            .then_execute(graphics_state.queue.clone(), command_buffer)
-            .unwrap()
-            .then_swapchain_present(graphics_state.queue.clone(), swapchain.clone(), image_num)
-            .then_signal_fence_and_flush();
-        *previous_frame_end = match future {
-            Ok(future) => Some(future.boxed()),
-            Err(FlushError::OutOfDate) => {
-                *recreate_swapchain = true;
-                Some(sync::now(graphics_state.device.clone()).boxed())
-            }
-            Err(e) => panic!("{}", e),
-        };
-    });
+    /* -- SUBMITTING COMMAND BUFFER -- */
+    let future = previous_frame_end
+        .take()
+        .unwrap()
+        .join(acquire_future)
+        .then_execute(queue.clone(), command_buffer)
+        .unwrap()
+        .then_swapchain_present(queue.clone(), swapchain.clone(), image_num)
+        .then_signal_fence_and_flush();
+    *previous_frame_end = match future {
+        Ok(future) => Some(future.boxed()),
+        Err(FlushError::OutOfDate) => {
+            *recreate_swapchain = true;
+            Some(sync::now(device.clone()).boxed())
+        }
+        Err(e) => panic!("{}", e),
+    };
 }

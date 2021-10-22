@@ -1,6 +1,7 @@
 use crate::event::Event;
 use crate::state::*;
 use clockwork_core::prelude::*;
+use egui_winit_vulkano::Gui;
 use log::*;
 use std::*;
 use winit::{
@@ -11,7 +12,7 @@ use winit::{
 /// A winit-based main loop
 pub fn main_loop<S>(mut state: S, mut mechanisms: Mechanisms<S, Event>)
 where
-    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState>,
+    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState> + CallbackSubstate<Option<Gui>>,
 {
     /* ---- INITIALIZATION ---- */
     info!("Initializing main loop");
@@ -51,6 +52,15 @@ where
     event_loop.run(move |ev, _, cf| {
         trace!("Handling next event: {:?}", ev);
         let current_time = time::Instant::now();
+
+        /* ---- UPDATING GUI, IF EXISTS ---- */
+        CallbackSubstate::<Option<Gui>>::callback_substate_mut(&mut state, |gui| {
+            gui.as_mut()
+                .expect("Fatal: GUI has not been initialized")
+                .update(&ev);
+        });
+
+        /* ---- HANDLING EVENT ---- */
         match ev {
             WinitEvent::UserEvent(Event::Tick(delta_time)) => {
                 debug!("Performing tick (delta time: {:?})", delta_time);
