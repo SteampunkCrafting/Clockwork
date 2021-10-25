@@ -12,6 +12,7 @@ steps:
     commands:
       - apt-get update
       - apt-get -y install --no-install-recommends build-essential python cmake libvulkan-dev vulkan-utils
+      - apt-get -y install --no-install-recommends libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
       - cargo test
   - name: Test in release mode
     image: rust:buster
