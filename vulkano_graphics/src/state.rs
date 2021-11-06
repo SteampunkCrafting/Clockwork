@@ -16,6 +16,7 @@ use vulkano::{
 use vulkano_win::VkSurfaceBuild;
 use winit::{dpi::PhysicalSize, window::WindowBuilder};
 
+#[derive(Clone)]
 pub struct GraphicsState {
     pub target_image_size: [u32; 2],
     pub render_pass: Arc<RenderPass>,

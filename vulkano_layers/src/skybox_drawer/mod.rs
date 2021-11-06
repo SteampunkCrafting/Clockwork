@@ -141,7 +141,7 @@ where
                                         .entry(mesh_id.clone())
                                         .or_insert_with(|| {
                                             (
-                                                graphics_state.clone(),
+                                                graphics_state,
                                                 &*meshes.get(mesh_id.clone()).lock(),
                                                 &*materials.get(mesh_id.clone()).lock(),
                                             )
