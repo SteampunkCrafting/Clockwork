@@ -128,17 +128,17 @@ fn draw<S>(
 ) where
     S: StateRequirements,
 {
-    let (surface, render_pass, device, queue) = {
+    let (mut target_image_size, render_pass, device, queue) = {
         let mut x = None;
         CallbackSubstate::<Option<GraphicsState>>::callback_substate(state, |gs| {
             let GraphicsState {
-                surface,
+                target_image_size,
                 render_pass,
                 device,
                 queue,
             } = gs.as_ref().unwrap();
             x = Some((
-                surface.clone(),
+                target_image_size.clone(),
                 render_pass.clone(),
                 device.clone(),
                 queue.clone(),
@@ -174,6 +174,12 @@ fn draw<S>(
         *swapchain = new_swapchain;
         *framebuffers = window_size_dependent_setup(&new_images, render_pass.clone());
         *recreate_swapchain = false;
+
+        let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
+        CallbackSubstate::<Option<GraphicsState>>::callback_substate_mut(state, |gs| {
+            target_image_size = [width, height];
+            gs.as_mut().unwrap().target_image_size = target_image_size;
+        });
     }
 
     let (image_num, suboptimal, acquire_future) =
@@ -191,7 +197,7 @@ fn draw<S>(
     }
 
     /* ---- DRAWING ---- */
-    let PhysicalSize { width, height } = surface.window().inner_size();
+    let [width, height] = target_image_size;
 
     /* -- BUILDING COMMAND BUFFER --  */
     let command_buffer = {

@@ -9,15 +9,15 @@ use vulkano::{
     image::{view::ImageView, AttachmentImage, ImageUsage, SwapchainImage},
     instance::Instance,
     render_pass::{Framebuffer, FramebufferAbstract, RenderPass, Subpass},
-    swapchain::{Surface, Swapchain},
+    swapchain::Swapchain,
     sync::{self, GpuFuture},
     Version,
 };
 use vulkano_win::VkSurfaceBuild;
-use winit::window::WindowBuilder;
+use winit::{dpi::PhysicalSize, window::WindowBuilder};
 
 pub struct GraphicsState {
-    pub surface: Arc<Surface<Window>>,
+    pub target_image_size: [u32; 2],
     pub render_pass: Arc<RenderPass>,
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
@@ -194,7 +194,10 @@ where
             framebuffers,
         },
         GraphicsState {
-            surface: swapchain.surface().clone(),
+            target_image_size: {
+                let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
+                [width, height]
+            },
             render_pass: render_pass.clone(),
             queue: queue.clone(),
             device,
