@@ -160,15 +160,11 @@ fn draw<S>(
             Err(SwapchainCreationError::UnsupportedDimensions) => return,
             Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
         };
+        let depth_image =
+            AttachmentImage::transient(device.clone(), dimensions, Format::D32_SFLOAT).unwrap();
         let new_images = new_images
             .into_iter()
-            .map(|image| {
-                (
-                    image,
-                    AttachmentImage::transient(device.clone(), dimensions, Format::D16_UNORM)
-                        .unwrap(),
-                )
-            })
+            .map(|image| (image, depth_image.clone()))
             .collect::<Vec<_>>();
 
         *swapchain = new_swapchain;
