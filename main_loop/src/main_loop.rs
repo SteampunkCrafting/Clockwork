@@ -1,7 +1,7 @@
 use crate::event::Event;
 use crate::state::*;
-use clockwork_core::prelude::*;
 use egui_winit_vulkano::Gui;
+use kernel::prelude::*;
 use log::*;
 use std::*;
 use winit::{

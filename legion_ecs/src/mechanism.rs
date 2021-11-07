@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::state::LegionState;
-use clockwork_core::prelude::*;
+use kernel::prelude::*;
 pub use legion::system;
 use legion::{systems::Builder, systems::ParallelRunnable, Schedule};
 

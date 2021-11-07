@@ -1,5 +1,5 @@
 use crate::state::GraphicsState;
-use clockwork_core::clockwork::CallbackSubstate;
+use kernel::clockwork::CallbackSubstate;
 use vulkano::command_buffer::{
     pool::standard::StandardCommandPoolAlloc, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };

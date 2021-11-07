@@ -26,7 +26,7 @@ impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debu
 /// implies `Substate<S>`:
 ///
 /// ```
-/// # use spc_clockwork_core::prelude::*;
+/// # use spc_clockwork_kernel::prelude::*;
 /// // Assume that a certain clockwork mechanism requires an i32 counter
 /// struct A(i32);
 /// let a: &A = A(0).substate();
@@ -38,7 +38,7 @@ impl<T> ClockworkEvent for T where T: Send + Clone + Eq + hash::Hash + fmt::Debu
 ///
 /// Obviously, there would be no point in using substates, if we didn't compose them:
 /// ```
-/// # use spc_clockwork_core::prelude::*;
+/// # use spc_clockwork_kernel::prelude::*;
 /// /* ---- Event section ---- */
 /// type Event = ();
 ///
@@ -161,7 +161,7 @@ where
 /// Example:
 /// ```
 /// use std::process::exit;
-/// # use spc_clockwork_core::prelude::*;
+/// # use spc_clockwork_kernel::prelude::*;
 ///
 /// #[derive(Eq, PartialEq, Debug)]
 /// struct State(u8);
@@ -320,7 +320,7 @@ where
     ///
     /// Example 1: Normal execution
     /// ```
-    /// # use spc_clockwork_core::prelude::*;
+    /// # use spc_clockwork_kernel::prelude::*;
     ///
     /// use std::process::exit;
     /// assert!(Clockwork::<(), ()>::builder()
@@ -333,7 +333,7 @@ where
     ///
     /// Example 2: Missing main loop
     /// ```
-    /// # use spc_clockwork_core::prelude::*;
+    /// # use spc_clockwork_kernel::prelude::*;
     /// assert!(Clockwork::<(), ()>::builder()
     ///     .with_state(())
     ///     // We miss the main loop here
@@ -349,7 +349,7 @@ where
     ///
     /// Example 3: Missing initial state
     /// ```
-    /// # use spc_clockwork_core::prelude::*;
+    /// # use spc_clockwork_kernel::prelude::*;
     /// use std::process::exit;
     ///
     /// assert!(Clockwork::<(), ()>::builder()

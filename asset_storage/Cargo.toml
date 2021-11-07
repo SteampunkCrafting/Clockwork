@@ -7,6 +7,6 @@ edition = "2018"
 
 [dependencies]
 
-[dependencies.clockwork_core]
-package = "spc_clockwork_core"
-path = "../core"
+[dependencies.kernel]
+package = "spc_clockwork_kernel"
+path = "../kernel"

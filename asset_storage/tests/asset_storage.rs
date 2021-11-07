@@ -1,4 +1,4 @@
-use clockwork_core::sync::{ReadLock, WriteLock};
+use kernel::sync::{ReadLock, WriteLock};
 use spc_clockwork_asset_storage::prelude::*;
 use std::thread;
 

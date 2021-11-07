@@ -5,11 +5,11 @@ use crate::{
     },
     vulkano_layer::VulkanoLayer,
 };
-use clockwork_core::{
+use egui_winit_vulkano::Gui;
+use kernel::{
     clockwork::{CallbackSubstate, ClockworkState},
     prelude::Mechanism,
 };
-use egui_winit_vulkano::Gui;
 use log::*;
 use main_loop::prelude::Event;
 use std::time::Duration;

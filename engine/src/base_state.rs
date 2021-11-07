@@ -1,8 +1,8 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use clockwork_core::clockwork::{CallbackSubstate, Substate};
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use graphics::prelude::{GraphicsState, Gui};
+use kernel::clockwork::{CallbackSubstate, Substate};
 use main_loop::{prelude::IOState, state::MainLoopState};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};

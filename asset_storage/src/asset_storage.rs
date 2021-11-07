@@ -1,4 +1,4 @@
-use clockwork_core::sync::ReadLock;
+use kernel::sync::ReadLock;
 use std::{cell::RefCell, collections::HashMap, hash::Hash};
 
 pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + 'static {}

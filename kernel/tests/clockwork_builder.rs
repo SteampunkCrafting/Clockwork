@@ -1,4 +1,4 @@
-use spc_clockwork_core::prelude::*;
+use spc_clockwork_kernel::prelude::*;
 use std::*;
 
 #[test]

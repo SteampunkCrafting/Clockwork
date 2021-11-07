@@ -1,5 +1,5 @@
 [package]
-name = "spc_clockwork_core"
+name = "spc_clockwork_kernel"
 version = "0.1.0"
 authors = ["Yaroslav V. Petrov <yaroslav.v.petrov@yandex.ru>"]
 edition = "2018"

@@ -1,4 +1,4 @@
-use spc_clockwork_core::sync::*;
+use spc_clockwork_kernel::sync::*;
 use std::thread;
 
 #[test]

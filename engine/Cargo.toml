@@ -8,9 +8,9 @@ edition = "2018"
 [dependencies]
 derive_builder = "0.10.2"
 
-[dependencies.clockwork_core]
-path = "../core"
-package = "spc_clockwork_core"
+[dependencies.kernel]
+path = "../kernel"
+package = "spc_clockwork_kernel"
 
 [dependencies.ecs]
 path = "../legion_ecs"

@@ -1,4 +1,4 @@
-use clockwork_core::sync::ReadLock;
+use kernel::sync::ReadLock;
 
 /// A representation of an immutable 2D RGBA Texture
 #[derive(Clone)]

@@ -8,13 +8,13 @@ use self::{
     vertex::Vertex,
 };
 use asset_storage::{asset_storage::AssetStorageKey, prelude::AssetStorage};
-use clockwork_core::clockwork::CallbackSubstate;
 use graphics::{
     prelude::VulkanoLayer,
     state::GraphicsState,
     vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::GraphicsPipeline},
     vulkano_layer,
 };
+use kernel::clockwork::CallbackSubstate;
 use legion_ecs::{prelude::*, state::LegionState};
 use physics::state::PhysicsState;
 use scene_utils::{

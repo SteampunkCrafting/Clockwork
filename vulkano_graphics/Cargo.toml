@@ -12,9 +12,9 @@ winit = "0.25.0"
 egui_winit_vulkano = "0.12.0"
 derive_builder = "0.10.2"
 
-[dependencies.clockwork_core]
-package = "spc_clockwork_core"
-path = "../core"
+[dependencies.kernel]
+package = "spc_clockwork_kernel"
+path = "../kernel"
 
 [dependencies.main_loop]
 package = "spc_clockwork_main_loop"

@@ -1,5 +1,5 @@
-use clockwork_core::clockwork::{CallbackSubstate, ClockworkState};
 use egui_winit_vulkano::Gui;
+use kernel::clockwork::{CallbackSubstate, ClockworkState};
 use log::{debug, info, trace};
 use main_loop::{prelude::Window, state::MainLoopState};
 use std::sync::Arc;

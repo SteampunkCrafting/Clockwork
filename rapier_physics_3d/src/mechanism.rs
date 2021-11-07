@@ -1,4 +1,4 @@
-use clockwork_core::prelude::{CallbackSubstate, Mechanism};
+use kernel::prelude::{CallbackSubstate, Mechanism};
 use main_loop::prelude::Event;
 use rapier3d::{dynamics::IntegrationParameters, pipeline::PhysicsPipeline};
 

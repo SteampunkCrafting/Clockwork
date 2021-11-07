@@ -1,6 +1,6 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use clockwork_core::clockwork::CallbackSubstate;
 use graphics::vulkano_layer;
+use kernel::clockwork::CallbackSubstate;
 use legion_ecs::state::LegionState;
 use physics::state::PhysicsState;
 use scene_utils::prelude::{PhongMaterialStorage, TexturedMeshStorage};
