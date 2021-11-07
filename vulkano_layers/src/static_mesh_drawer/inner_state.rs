@@ -44,6 +44,7 @@ where
             ..
         }: &GraphicsState,
     ) -> Self {
+        let subpass = Subpass::from(render_pass.clone(), 0).unwrap();
         Self {
             pipeline: Arc::new(
                 GraphicsPipeline::start()
@@ -66,9 +67,10 @@ where
                             .main_entry_point(),
                         (),
                     )
+                    .blend_alpha_blending()
                     .depth_stencil_simple_depth()
                     .cull_mode_back()
-                    .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+                    .render_pass(subpass)
                     .build(device.clone())
                     .unwrap(),
             ),
