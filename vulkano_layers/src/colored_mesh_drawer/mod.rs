@@ -10,11 +10,11 @@ use self::{
 use asset_storage::{asset_storage::AssetStorageKey, prelude::AssetStorage};
 use graphics::{
     prelude::VulkanoLayer,
-    state::GraphicsState,
+    state::{GraphicsState, OptionGraphicsState},
     vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::GraphicsPipeline},
     vulkano_layer,
 };
-use kernel::clockwork::CallbackSubstate;
+use kernel::state::CallbackSubstate;
 use legion_ecs::{prelude::*, state::LegionState};
 use physics::state::PhysicsState;
 use scene_utils::{
@@ -95,7 +95,7 @@ where
             PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>,
         >,
     ) {
-        state.callback_substate(|graphics_state: &Option<GraphicsState>| {
+        state.callback_substate(|graphics_state: &OptionGraphicsState| {
             state.callback_substate(|LegionState { world, .. }| {
                 state.callback_substate(|meshes: &ColoredMeshStorage<I>| {
                     state.callback_substate(|physics: &PhysicsState| {

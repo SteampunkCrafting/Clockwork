@@ -1,3 +1,4 @@
+use kernel::prelude::ClockworkState;
 use rapier3d::{
     dynamics::{CCDSolver, JointSet, RigidBodySet},
     geometry::{BroadPhase, ColliderSet, NarrowPhase},
@@ -18,6 +19,8 @@ pub struct PhysicsState {
     pub narrow_phase: NarrowPhase,
     pub ccd_solver: CCDSolver,
 }
+
+impl ClockworkState for PhysicsState {}
 
 impl<T> From<T> for Gravity
 where

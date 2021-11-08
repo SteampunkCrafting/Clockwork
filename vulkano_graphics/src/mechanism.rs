@@ -1,17 +1,17 @@
 use crate::{
     state::{
         init_vulkano, window_size_dependent_setup, GraphicsState, InternalMechanismState,
-        StateRequirements,
+        OptionGraphicsState, StateRequirements,
     },
     vulkano_layer::VulkanoLayer,
 };
 use egui_winit_vulkano::Gui;
 use kernel::{
-    clockwork::{CallbackSubstate, ClockworkState},
     prelude::Mechanism,
+    state::{CallbackSubstate, ClockworkState},
 };
 use log::*;
-use main_loop::prelude::Event;
+use main_loop::prelude::{Event, OptionGui};
 use std::time::Duration;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
@@ -98,11 +98,11 @@ where
                 info!("Initializing Vulkano Graphics");
                 let (internal, graphics_state, gui) = init_vulkano(state);
                 *inner = Some(internal);
-                CallbackSubstate::<Option<GraphicsState>>::callback_substate_mut(state, |gs| {
-                    *gs = Some(graphics_state);
+                CallbackSubstate::<OptionGraphicsState>::callback_substate_mut(state, |gs| {
+                    **gs = Some(graphics_state);
                 });
-                CallbackSubstate::<Option<Gui>>::callback_substate_mut(state, |gs| {
-                    *gs = Some(gui);
+                CallbackSubstate::<OptionGui>::callback_substate_mut(state, |gs| {
+                    **gs = Some(gui);
                 });
                 info!("Done initializing Vulkano Graphics");
             }
@@ -130,7 +130,7 @@ fn draw<S>(
 {
     let (mut target_image_size, render_pass, device, queue) = {
         let mut x = None;
-        CallbackSubstate::<Option<GraphicsState>>::callback_substate(state, |gs| {
+        CallbackSubstate::<OptionGraphicsState>::callback_substate(state, |gs| {
             let GraphicsState {
                 target_image_size,
                 render_pass,
@@ -172,7 +172,7 @@ fn draw<S>(
         *recreate_swapchain = false;
 
         let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
-        CallbackSubstate::<Option<GraphicsState>>::callback_substate_mut(state, |gs| {
+        CallbackSubstate::<OptionGraphicsState>::callback_substate_mut(state, |gs| {
             target_image_size = [width, height];
             gs.as_mut().unwrap().target_image_size = target_image_size;
         });
@@ -228,7 +228,7 @@ fn draw<S>(
             .unwrap();
 
         let mut cb = None;
-        CallbackSubstate::<Option<Gui>>::callback_substate_mut(state, |gui| {
+        CallbackSubstate::<OptionGui>::callback_substate_mut(state, |gui| {
             cb = Some(gui.as_mut().unwrap().draw_on_subpass_image([width, height]));
         });
         builder.execute_commands(cb.unwrap()).unwrap();

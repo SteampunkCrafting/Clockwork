@@ -1,9 +1,18 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::prelude::{GraphicsState, Gui};
-use kernel::clockwork::{CallbackSubstate, Substate};
-use main_loop::{prelude::IOState, state::MainLoopState};
+use graphics::{
+    prelude::{GraphicsState, Gui},
+    state::OptionGraphicsState,
+};
+use kernel::{
+    prelude::ClockworkState,
+    state::{CallbackSubstate, Substate},
+};
+use main_loop::{
+    prelude::{IOState, OptionGui},
+    state::MainLoopState,
+};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 
@@ -32,8 +41,10 @@ where
 
     assets: Assets<C>,
 
-    graphics_state: Option<GraphicsState>,
+    graphics_state: OptionGraphicsState,
 }
+
+impl<C> ClockworkState for BaseState<C> where C: AssetStorageKey {}
 
 impl<C> Assets<C>
 where
@@ -64,7 +75,7 @@ where
             ecs: LegionState::default(),
             assets: assets.ok_or("Missing assets")?,
             main_loop_state: Default::default(),
-            graphics_state: None,
+            graphics_state: Default::default(),
         };
         let BaseState {
             ecs: LegionState { resources, .. },
@@ -85,15 +96,15 @@ where
     }
 }
 
-impl<C> Substate<Option<GraphicsState>> for BaseState<C>
+impl<C> Substate<OptionGraphicsState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &Option<GraphicsState> {
+    fn substate(&self) -> &OptionGraphicsState {
         &self.graphics_state
     }
 
-    fn substate_mut(&mut self) -> &mut Option<GraphicsState> {
+    fn substate_mut(&mut self) -> &mut OptionGraphicsState {
         &mut self.graphics_state
     }
 }
@@ -205,15 +216,15 @@ where
     }
 }
 
-impl<C> CallbackSubstate<Option<Gui>> for BaseState<C>
+impl<C> CallbackSubstate<OptionGui> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate(&self, callback: impl FnOnce(&Option<Gui>)) {
+    fn callback_substate(&self, callback: impl FnOnce(&OptionGui)) {
         callback(&self.ecs.resources.get().unwrap())
     }
 
-    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut Option<Gui>)) {
+    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut OptionGui)) {
         callback(&mut self.ecs.resources.get_mut().unwrap())
     }
 }

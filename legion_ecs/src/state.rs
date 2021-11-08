@@ -1,3 +1,4 @@
+use kernel::prelude::ClockworkState;
 use legion::{storage::IntoComponentSource, systems::Resource, Resources, World};
 
 #[derive(Default)]
@@ -10,6 +11,7 @@ impl LegionState {
         Default::default()
     }
 }
+impl ClockworkState for LegionState {}
 
 #[derive(Default)]
 pub struct LegionStateBuilder {

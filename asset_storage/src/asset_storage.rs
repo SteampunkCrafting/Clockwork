@@ -1,4 +1,4 @@
-use kernel::sync::ReadLock;
+use kernel::{prelude::ClockworkState, sync::ReadLock};
 use std::{cell::RefCell, collections::HashMap, hash::Hash};
 
 pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
@@ -6,6 +6,13 @@ pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
 pub struct AssetStorage<T, U>(Box<dyn Send + Fn(T) -> U>, RefCell<HashMap<T, ReadLock<U>>>)
 where
     T: AssetStorageKey;
+
+impl<T, U> ClockworkState for AssetStorage<T, U>
+where
+    T: AssetStorageKey,
+    U: 'static,
+{
+}
 
 impl<T> AssetStorageKey for T where T: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
 

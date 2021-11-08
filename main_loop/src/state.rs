@@ -1,6 +1,7 @@
 use crate::event::Event;
 use derive_builder::Builder;
 use getset::Getters;
+use kernel::prelude::ClockworkState;
 use std::{collections::HashSet, time};
 use winit::event::VirtualKeyCode;
 use winit::event_loop::EventLoop;
@@ -23,6 +24,8 @@ pub struct IOState {
     pub statistics: Statistics,
 }
 
+impl ClockworkState for IOState {}
+
 /// Container for Winit event loop.
 ///
 /// Required for the initialization of mechanisms, whose functionality depends
@@ -31,6 +34,8 @@ pub struct IOState {
 /// the content of this struct is `Some` only at the initialization stage.
 #[derive(Default)]
 pub struct MainLoopState(pub Option<EventLoop<Event>>);
+
+impl ClockworkState for MainLoopState {}
 
 impl IOState {
     /// Creates new builder of the IOState

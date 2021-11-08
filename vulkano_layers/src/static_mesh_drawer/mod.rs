@@ -1,6 +1,9 @@
 use self::inner_state::InnerState;
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::{state::GraphicsState, vulkano_layer::VulkanoLayer};
+use graphics::{
+    state::{GraphicsState, OptionGraphicsState},
+    vulkano_layer::VulkanoLayer,
+};
 use legion_ecs::{
     prelude::{component, IntoQuery},
     state::LegionState,
@@ -44,7 +47,7 @@ where
             engine_state.callback_substate(|meshes: &TexturedMeshStorage<I>| {
                 engine_state.callback_substate(|materials: &PhongMaterialStorage<I>| {
                     engine_state.callback_substate(|PhysicsState { bodies, .. }: &PhysicsState| {
-                        engine_state.callback_substate(|graphics_state: &Option<GraphicsState>| {
+                        engine_state.callback_substate(|graphics_state: &OptionGraphicsState| {
                             /* ---- LAZY INITIALIZATION ---- */
                             let graphics_state = graphics_state.as_ref().unwrap();
                             let InnerState {

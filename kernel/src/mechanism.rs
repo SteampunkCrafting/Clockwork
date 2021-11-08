@@ -1,4 +1,4 @@
-use crate::clockwork::*;
+use crate::prelude::{ClockworkEvent, ClockworkState};
 use std::*;
 
 /// Mechanism is an event handler to clockwork events.

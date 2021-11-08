@@ -1,8 +1,14 @@
 use egui_winit_vulkano::Gui;
-use kernel::clockwork::{CallbackSubstate, ClockworkState};
+use kernel::state::{CallbackSubstate, ClockworkState};
 use log::{debug, info, trace};
-use main_loop::{prelude::Window, state::MainLoopState};
-use std::sync::Arc;
+use main_loop::{
+    prelude::{OptionGui, Window},
+    state::MainLoopState,
+};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 use vulkano::{
     device::{physical::PhysicalDevice, Device, DeviceExtensions, Queue},
     format::Format,
@@ -24,6 +30,22 @@ pub struct GraphicsState {
     pub queue: Arc<Queue>,
 }
 
+#[derive(Default)]
+pub struct OptionGraphicsState(Option<GraphicsState>);
+impl ClockworkState for OptionGraphicsState {}
+impl Deref for OptionGraphicsState {
+    type Target = Option<GraphicsState>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for OptionGraphicsState {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 pub(crate) struct InternalMechanismState {
     pub swapchain: Arc<Swapchain<Window>>,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
@@ -33,15 +55,15 @@ pub(crate) struct InternalMechanismState {
 
 pub trait StateRequirements:
     CallbackSubstate<MainLoopState>
-    + CallbackSubstate<Option<GraphicsState>>
-    + CallbackSubstate<Option<Gui>>
+    + CallbackSubstate<OptionGraphicsState>
+    + CallbackSubstate<OptionGui>
     + ClockworkState
 {
 }
 impl<T> StateRequirements for T where
     T: CallbackSubstate<MainLoopState>
-        + CallbackSubstate<Option<GraphicsState>>
-        + CallbackSubstate<Option<Gui>>
+        + CallbackSubstate<OptionGraphicsState>
+        + CallbackSubstate<OptionGui>
         + ClockworkState
 {
 }

@@ -3,16 +3,35 @@ use crate::state::*;
 use egui_winit_vulkano::Gui;
 use kernel::prelude::*;
 use log::*;
-use std::*;
+use std::{
+    ops::{Deref, DerefMut},
+    *,
+};
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
 
+#[derive(Default)]
+pub struct OptionGui(Option<Gui>);
+impl ClockworkState for OptionGui {}
+impl Deref for OptionGui {
+    type Target = Option<Gui>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl DerefMut for OptionGui {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 /// A winit-based main loop
 pub fn main_loop<S>(mut state: S, mut mechanisms: Mechanisms<S, Event>)
 where
-    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState> + CallbackSubstate<Option<Gui>>,
+    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState> + CallbackSubstate<OptionGui>, //+ CallbackSubstate<Option<Gui>>,
 {
     /* ---- INITIALIZATION ---- */
     info!("Initializing main loop");
@@ -54,8 +73,9 @@ where
         let current_time = time::Instant::now();
 
         /* ---- UPDATING GUI, IF EXISTS ---- */
-        CallbackSubstate::<Option<Gui>>::callback_substate_mut(&mut state, |gui| {
-            gui.as_mut()
+        CallbackSubstate::<OptionGui>::callback_substate_mut(&mut state, |gui| {
+            gui.deref_mut()
+                .as_mut()
                 .expect("Fatal: GUI has not been initialized")
                 .update(&ev);
         });
