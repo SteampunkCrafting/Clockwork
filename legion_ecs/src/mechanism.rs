@@ -10,7 +10,7 @@ where
     E: ClockworkEvent;
 impl<S, E> Mechanism<S, E> for LegionSystems<E>
 where
-    S: CallbackSubstate<LegionState>,
+    S: ClockworkState + CallbackSubstate<LegionState>,
     E: ClockworkEvent,
 {
     fn name(&self) -> &'static str {

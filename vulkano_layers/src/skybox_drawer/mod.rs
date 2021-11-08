@@ -1,9 +1,6 @@
 use self::inner_state::InnerState;
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::{
-    state::{GraphicsState, OptionGraphicsState},
-    vulkano_layer::VulkanoLayer,
-};
+use graphics::{state::OptionGraphicsState, vulkano_layer::VulkanoLayer};
 use legion_ecs::{
     prelude::{component, IntoQuery},
     state::LegionState,

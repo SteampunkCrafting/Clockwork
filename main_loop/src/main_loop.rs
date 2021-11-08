@@ -31,7 +31,10 @@ impl DerefMut for OptionGui {
 /// A winit-based main loop
 pub fn main_loop<S>(mut state: S, mut mechanisms: Mechanisms<S, Event>)
 where
-    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState> + CallbackSubstate<OptionGui>, //+ CallbackSubstate<Option<Gui>>,
+    S: ClockworkState
+        + CallbackSubstate<IOState>
+        + CallbackSubstate<MainLoopState>
+        + CallbackSubstate<OptionGui>,
 {
     /* ---- INITIALIZATION ---- */
     info!("Initializing main loop");

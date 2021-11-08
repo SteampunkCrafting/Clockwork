@@ -122,7 +122,7 @@ where
 ///
 /// This is a more general type trait, which should be requested by
 /// mechanisms.
-pub trait CallbackSubstate<S>: ClockworkState
+pub trait CallbackSubstate<S>
 where
     S: ClockworkState + ?Sized,
 {

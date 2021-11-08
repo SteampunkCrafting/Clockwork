@@ -1,10 +1,7 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::{
-    prelude::{GraphicsState, Gui},
-    state::OptionGraphicsState,
-};
+use graphics::{prelude::Gui, state::OptionGraphicsState};
 use kernel::{
     prelude::ClockworkState,
     state::{CallbackSubstate, Substate},

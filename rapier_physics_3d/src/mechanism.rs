@@ -1,4 +1,4 @@
-use kernel::prelude::{CallbackSubstate, Mechanism};
+use kernel::prelude::{CallbackSubstate, ClockworkState, Mechanism};
 use main_loop::prelude::Event;
 use rapier3d::{dynamics::IntegrationParameters, pipeline::PhysicsPipeline};
 
@@ -9,7 +9,7 @@ pub struct Rapier3DTicker(PhysicsPipeline, IntegrationParameters);
 
 impl<S> Mechanism<S, Event> for Rapier3DTicker
 where
-    S: CallbackSubstate<PhysicsState>,
+    S: ClockworkState + CallbackSubstate<PhysicsState>,
 {
     fn name(&self) -> &'static str {
         "Rapier 3D Physics Ticker"

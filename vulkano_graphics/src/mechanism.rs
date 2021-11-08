@@ -5,7 +5,6 @@ use crate::{
     },
     vulkano_layer::VulkanoLayer,
 };
-use egui_winit_vulkano::Gui;
 use kernel::{
     prelude::Mechanism,
     state::{CallbackSubstate, ClockworkState},
