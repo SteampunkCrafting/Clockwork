@@ -110,20 +110,20 @@ impl<C> CallbackSubstate<PhysicsState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate(&self, callback: impl FnOnce(&PhysicsState)) {
+    fn callback_substate<R>(&self, callback: impl FnOnce(&PhysicsState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
         } = self;
-        callback(&resources.get().unwrap());
+        callback(&resources.get().unwrap())
     }
 
-    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut PhysicsState)) {
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut PhysicsState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
         } = self;
-        callback(&mut resources.get_mut().unwrap());
+        callback(&mut resources.get_mut().unwrap())
     }
 }
 
@@ -131,15 +131,15 @@ impl<C> CallbackSubstate<IOState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate(&self, callback: impl FnOnce(&IOState)) {
+    fn callback_substate<R>(&self, callback: impl FnOnce(&IOState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
         } = &self;
-        callback(&resources.get().unwrap());
+        callback(&resources.get().unwrap())
     }
 
-    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut IOState)) {
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut IOState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -217,11 +217,11 @@ impl<C> CallbackSubstate<OptionGui> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate(&self, callback: impl FnOnce(&OptionGui)) {
+    fn callback_substate<R>(&self, callback: impl FnOnce(&OptionGui) -> R) -> R {
         callback(&self.ecs.resources.get().unwrap())
     }
 
-    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut OptionGui)) {
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut OptionGui) -> R) -> R {
         callback(&mut self.ecs.resources.get_mut().unwrap())
     }
 }

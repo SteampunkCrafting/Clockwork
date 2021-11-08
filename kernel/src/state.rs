@@ -127,9 +127,9 @@ where
     S: ClockworkState + ?Sized,
 {
     /// Executes provided callback, supplying its substate reference
-    fn callback_substate(&self, callback: impl FnOnce(&S));
+    fn callback_substate<R>(&self, callback: impl FnOnce(&S) -> R) -> R;
     /// Executes provided callback, supplying its mutable substate reference
-    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut S));
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut S) -> R) -> R;
 }
 
 /// Having substate always implies a possibility
@@ -140,11 +140,11 @@ where
     T: Substate<S>,
     S: ClockworkState + ?Sized,
 {
-    fn callback_substate(&self, callback: impl FnOnce(&S)) {
+    fn callback_substate<R>(&self, callback: impl FnOnce(&S) -> R) -> R {
         callback(self.substate())
     }
 
-    fn callback_substate_mut(&mut self, callback: impl FnOnce(&mut S)) {
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut S) -> R) -> R {
         callback(self.substate_mut())
     }
 }
