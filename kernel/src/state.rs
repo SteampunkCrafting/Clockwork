@@ -148,3 +148,128 @@ where
         callback(self.substate_mut())
     }
 }
+
+/// A wrapper struct for the engine state that
+/// allows to access the substate objects through
+/// callback guards.
+pub struct EngineState<S>(S)
+where
+    S: ClockworkState;
+
+/// A callback guard, which enables Clockwork State reading.
+pub struct ReadCallbackGuard<'a, S, R = ()>
+where
+    S: ClockworkState,
+{
+    state: &'a EngineState<S>,
+    result: R,
+}
+
+/// A callback guard, which enables Clockwork State writing.
+pub struct WriteCallbackGuard<'a, S, R = ()>
+where
+    S: ClockworkState,
+{
+    state: &'a mut EngineState<S>,
+    result: R,
+}
+
+impl<S> EngineState<S>
+where
+    S: ClockworkState,
+{
+    /// Constructs a read callback guard,
+    /// allowing read-only access to the substate objects
+    /// of this clockwork state.
+    pub fn get(&self) -> ReadCallbackGuard<'_, S> {
+        ReadCallbackGuard {
+            state: self,
+            result: (),
+        }
+    }
+
+    /// Constructs a write callback guard,
+    /// allowing read-write access to the substate objects
+    /// of this clockwork state.
+    pub fn get_mut<T, R>(&mut self) -> WriteCallbackGuard<'_, S>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        WriteCallbackGuard {
+            state: self,
+            result: (),
+        }
+    }
+}
+
+impl<'a, S, R> ReadCallbackGuard<'a, S, R>
+where
+    S: ClockworkState,
+{
+    /// Destroys the callback guard, returning accumulated result
+    pub fn finish(self) -> R {
+        self.result
+    }
+
+    /// Executes the callback, which takes a reference to a substate,
+    /// and the accumulated result, returning another accumulated result.
+    pub fn then_get<T, U>(self, callback: impl FnOnce(&T, R) -> U) -> ReadCallbackGuard<'a, S, U>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        let Self { state, result } = self;
+        ReadCallbackGuard {
+            result: state
+                .0
+                .callback_substate(move |state| callback(state, result)),
+            state,
+        }
+    }
+}
+
+impl<'a, S, R> WriteCallbackGuard<'a, S, R>
+where
+    S: ClockworkState,
+{
+    /// Destroys the callback guard, returning accumulated result
+    pub fn finish(self) -> R {
+        self.result
+    }
+
+    /// Executes the callback, which takes a reference to a substate,
+    /// and the accumulated result, returning another accumulated result.
+    pub fn then_get<T, U>(self, callback: impl FnOnce(R, &T) -> U) -> WriteCallbackGuard<'a, S, U>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        let Self { state, result } = self;
+        WriteCallbackGuard {
+            result: state
+                .0
+                .callback_substate(move |state| callback(result, state)),
+            state,
+        }
+    }
+
+    /// Executes the callback, which takes a mutable reference to a substate,
+    /// and the accumulated result, returning another accumulated result.
+    pub fn then_get_mut<T, U>(
+        self,
+        callback: impl FnOnce(R, &mut T) -> U,
+    ) -> WriteCallbackGuard<'a, S, U>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        let Self { state, result } = self;
+        WriteCallbackGuard {
+            result: state
+                .0
+                .callback_substate_mut(move |state| callback(result, state)),
+            state,
+        }
+    }
+}
