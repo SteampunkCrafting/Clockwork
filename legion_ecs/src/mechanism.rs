@@ -17,13 +17,15 @@ where
         "Legion systems"
     }
 
-    fn clink(&mut self, state: &mut S, event: E) {
-        state.callback_substate_mut(|LegionState { world, resources }| {
-            match self.0.get_mut(&event) {
-                Some(schedule) => schedule.execute(world, resources),
-                None => (),
-            }
-        });
+    fn clink(&mut self, state: &mut EngineState<S>, event: E) {
+        state
+            .get_mut(
+                |LegionState { world, resources }| match self.0.get_mut(&event) {
+                    Some(schedule) => schedule.execute(world, resources),
+                    None => (),
+                },
+            )
+            .finish()
     }
 }
 impl<E> LegionSystems<E>

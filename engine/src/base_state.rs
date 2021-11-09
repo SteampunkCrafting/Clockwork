@@ -86,7 +86,7 @@ where
         resources.insert(IOState::default());
 
         /* ---- INITIALIZING GUI ---- */
-        resources.insert(Option::<Gui>::None);
+        resources.insert(OptionGui::default());
 
         /* ---- RETURNING ---- */
         Ok(base_state)

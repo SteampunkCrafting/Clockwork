@@ -29,7 +29,7 @@ impl DerefMut for OptionGui {
 }
 
 /// A winit-based main loop
-pub fn main_loop<S>(mut state: S, mut mechanisms: Mechanisms<S, Event>)
+pub fn main_loop<S>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, Event>)
 where
     S: ClockworkState
         + CallbackSubstate<IOState>
@@ -43,7 +43,9 @@ where
 
     /* -- ADDING EVENT LOOP OBJECT TO THE STATE -- */
     info!("Adding winit event loop to the engine state");
-    state.callback_substate_mut(|MainLoopState(el)| *el = Some(event_loop));
+    state
+        .get_mut(|MainLoopState(el)| *el = Some(event_loop))
+        .finish();
     info!("Done adding winit event loop to the engine state");
 
     /* -- INITIALIZING MECHANISMS -- */
@@ -54,11 +56,9 @@ where
 
     /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
     info!("Retrieving event loop object from the engine state");
-    let event_loop = {
-        let mut event_loop = None;
-        state.callback_substate_mut(|MainLoopState(el)| event_loop = el.take());
-        event_loop.unwrap()
-    };
+    let event_loop = state
+        .get_mut(|MainLoopState(el)| el.take().unwrap())
+        .finish();
     info!("Done retrieving event loop object from the engine state");
 
     /* ---- EVENT LOOP LAUNCH ---- */
@@ -76,12 +76,14 @@ where
         let current_time = time::Instant::now();
 
         /* ---- UPDATING GUI, IF EXISTS ---- */
-        CallbackSubstate::<OptionGui>::callback_substate_mut(&mut state, |gui| {
-            gui.deref_mut()
-                .as_mut()
-                .expect("Fatal: GUI has not been initialized")
-                .update(&ev);
-        });
+        state
+            .get_mut(|gui: &mut OptionGui| {
+                gui.deref_mut()
+                    .as_mut()
+                    .expect("Fatal: GUI has not been initialized")
+                    .update(&ev)
+            })
+            .finish();
 
         /* ---- HANDLING EVENT ---- */
         match ev {
@@ -118,40 +120,37 @@ where
                     },
                 ..
             } => {
-                state.callback_substate_mut(
-                    |IOState {
-                         input:
-                             Input {
-                                 pressed_keys: pk, ..
-                             },
-                         ..
-                     }| match keyboard_state {
-                        winit::event::ElementState::Pressed => {
-                            pk.insert(vkk);
-                        }
-                        winit::event::ElementState::Released => {
-                            pk.remove(&vkk);
-                        }
-                    },
-                );
+                state
+                    .get_mut(
+                        |IOState {
+                             input:
+                                 Input {
+                                     pressed_keys: pk, ..
+                                 },
+                             ..
+                         }| match keyboard_state {
+                            winit::event::ElementState::Pressed => {
+                                pk.insert(vkk);
+                            }
+                            winit::event::ElementState::Released => {
+                                pk.remove(&vkk);
+                            }
+                        },
+                    )
+                    .finish();
             }
             WinitEvent::MainEventsCleared => {
-                let (desired_tick_period, desired_min_draw_period) = {
-                    let mut res = None;
-                    state.callback_substate_mut(
+                let (desired_tick_period, desired_min_draw_period) = state
+                    .get_mut(
                         |IOState {
                              desired_tick_period,
                              desired_min_draw_period,
                              ..
                          }| {
-                            res = Some((
-                                desired_tick_period.clone(),
-                                desired_min_draw_period.clone(),
-                            ));
+                            (desired_tick_period.clone(), desired_min_draw_period.clone())
                         },
-                    );
-                    res.unwrap()
-                };
+                    )
+                    .finish();
                 let mut est_tick_period = Default::default();
                 let mut est_draw_period = Default::default();
 
@@ -192,24 +191,26 @@ where
                         }
                     }
                 }
-                state.callback_substate_mut(
-                    |IOState {
-                         statistics:
-                             Statistics {
-                                 ticks_total: state_ticks_total,
-                                 frames_total: state_frames_total,
-                                 tick_period: state_tick_period,
-                                 draw_period: state_draw_period,
-                                 ..
-                             },
-                         ..
-                     }| {
-                        *state_ticks_total = ticks_total;
-                        *state_frames_total = frames_total;
-                        *state_tick_period = est_tick_period;
-                        *state_draw_period = est_draw_period;
-                    },
-                );
+                state
+                    .get_mut(
+                        |IOState {
+                             statistics:
+                                 Statistics {
+                                     ticks_total: state_ticks_total,
+                                     frames_total: state_frames_total,
+                                     tick_period: state_tick_period,
+                                     draw_period: state_draw_period,
+                                     ..
+                                 },
+                             ..
+                         }| {
+                            *state_ticks_total = ticks_total;
+                            *state_frames_total = frames_total;
+                            *state_tick_period = est_tick_period;
+                            *state_draw_period = est_draw_period;
+                        },
+                    )
+                    .finish()
             }
             _ => {}
         };

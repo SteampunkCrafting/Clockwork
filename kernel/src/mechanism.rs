@@ -1,4 +1,4 @@
-use crate::prelude::{ClockworkEvent, ClockworkState};
+use crate::prelude::{ClockworkEvent, ClockworkState, EngineState};
 use std::*;
 
 /// Mechanism is an event handler to clockwork events.
@@ -13,7 +13,7 @@ where
     fn name(&self) -> &'static str;
 
     /// Defines a reaction of the mechanism on the event
-    fn clink(&mut self, state: &mut S, event: E);
+    fn clink(&mut self, state: &mut EngineState<S>, event: E);
 
     /// Defines a set of events, which this mechanism is handling.
     /// The method is called once during the mechanisms assembly.
@@ -39,7 +39,7 @@ where
     fn name(&self) -> &'static str;
 
     /// Defines a reaction of the mechanism on the event
-    fn clink(&mut self, state: &S, event: E);
+    fn clink(&mut self, state: &EngineState<S>, event: E);
 
     /// Defines a set of events, which this mechanism is handling.
     /// The method is called once during the mechanisms assembly.
@@ -89,7 +89,7 @@ where
     /// Gets a mutable reference to the state, and event,
     /// then calls `clink` on every `Mechanism`, and `ReadMechanism`
     /// instance, which has been subscribed to the event of this kind.
-    pub fn clink_event(&mut self, state: &mut S, event: E) {
+    pub fn clink_event(&mut self, state: &mut EngineState<S>, event: E) {
         let Self {
             all_mechanisms,
             events_to_mechanisms,

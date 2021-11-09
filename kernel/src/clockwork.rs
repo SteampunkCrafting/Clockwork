@@ -27,7 +27,7 @@ where
             mechanisms,
         } = self;
         info!("Starting Clockwork Engine");
-        main_loop(state, mechanisms);
+        main_loop(EngineState(state), mechanisms);
         info!("Terminating Clockwork Engine");
     }
 

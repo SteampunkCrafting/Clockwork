@@ -1,4 +1,4 @@
-use crate::prelude::{ClockworkEvent, ClockworkState, Mechanisms};
+use crate::prelude::{ClockworkEvent, ClockworkState, EngineState, Mechanisms};
 
 /// A main loop trait.
 ///
@@ -51,15 +51,16 @@ use crate::prelude::{ClockworkEvent, ClockworkState, Mechanisms};
 /// the `MainLoop` should return `()`. After the stabilization occurs,
 /// the main loop will be returning `!`, which might become a breaking change.
 /// For more information, see this [issue](https://github.com/rust-lang/rust/issues/35121)
-pub trait MainLoop<S, E>: FnOnce(S, Mechanisms<S, E>)
+pub trait MainLoop<S, E>: FnOnce(EngineState<S>, Mechanisms<S, E>)
 where
     S: ClockworkState,
     E: ClockworkEvent,
 {
 }
+
 impl<T, S, E> MainLoop<S, E> for T
 where
-    T: FnOnce(S, Mechanisms<S, E>),
+    T: FnOnce(EngineState<S>, Mechanisms<S, E>),
     S: ClockworkState,
     E: ClockworkEvent,
 {

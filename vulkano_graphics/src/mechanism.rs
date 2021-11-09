@@ -6,7 +6,7 @@ use crate::{
     vulkano_layer::VulkanoLayer,
 };
 use kernel::{
-    prelude::Mechanism,
+    prelude::{EngineState, Mechanism},
     state::{CallbackSubstate, ClockworkState},
 };
 use log::*;
@@ -78,7 +78,7 @@ where
         "Vulkano Graphics"
     }
 
-    fn clink(&mut self, state: &mut S, event: Event) {
+    fn clink(&mut self, state: &mut EngineState<S>, event: Event) {
         match (event, self) {
             (
                 Event::Draw(_),
@@ -86,7 +86,9 @@ where
                     layers,
                     inner: Some(internal_state),
                 },
-            ) => draw(state, layers, internal_state),
+            ) => state
+                .get_mut(|state| draw(state, layers, internal_state))
+                .finish(),
             (
                 Event::Initialization,
                 Self {
@@ -95,14 +97,13 @@ where
                 },
             ) => {
                 info!("Initializing Vulkano Graphics");
-                let (internal, graphics_state, gui) = init_vulkano(state);
+                let (internal, graphics_state, gui) =
+                    state.get(|state: &S| init_vulkano(state)).finish();
                 *inner = Some(internal);
-                CallbackSubstate::<OptionGraphicsState>::callback_substate_mut(state, |gs| {
-                    **gs = Some(graphics_state);
-                });
-                CallbackSubstate::<OptionGui>::callback_substate_mut(state, |gs| {
-                    **gs = Some(gui);
-                });
+                state
+                    .get_mut(|state: &mut OptionGraphicsState| **state = Some(graphics_state))
+                    .then_get_mut(|(), state: &mut OptionGui| **state = Some(gui))
+                    .finish();
                 info!("Done initializing Vulkano Graphics");
             }
             _ => unreachable!(),
