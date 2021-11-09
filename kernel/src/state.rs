@@ -210,7 +210,7 @@ where
 
     /// Executes the callback, which takes a reference to a substate,
     /// and the accumulated result, returning another accumulated result.
-    pub fn then_get<T, U>(self, callback: impl FnOnce(&T, R) -> U) -> ReadCallbackGuard<'a, S, U>
+    pub fn then_get<T, U>(self, callback: impl FnOnce(R, &T) -> U) -> ReadCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
         S: CallbackSubstate<T>,
@@ -219,7 +219,7 @@ where
         ReadCallbackGuard {
             result: state
                 .0
-                .callback_substate(move |state| callback(state, result)),
+                .callback_substate(move |state| callback(result, state)),
             state,
         }
     }
