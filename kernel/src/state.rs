@@ -180,21 +180,32 @@ where
 {
     /// Constructs a read callback guard,
     /// allowing read-only access to the substate objects
-    /// of this clockwork state.
-    pub fn get(&self) -> ReadCallbackGuard<'_, S> {
+    /// of this clockwork state, then executes a callback on it.
+    pub fn get<T, R>(&self, callback: impl FnOnce(&T) -> R) -> ReadCallbackGuard<'_, S, R>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
         ReadCallbackGuard {
             state: self,
-            result: (),
+            result: self.0.callback_substate(|state| callback(state)),
         }
     }
 
     /// Constructs a write callback guard,
     /// allowing read-write access to the substate objects
-    /// of this clockwork state.
-    pub fn get_mut(&mut self) -> WriteCallbackGuard<'_, S> {
+    /// of this clockwork state, then executes a callback on it.
+    pub fn get_mut<T, R>(
+        &mut self,
+        callback: impl FnOnce(&mut T) -> R,
+    ) -> WriteCallbackGuard<'_, S, R>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
         WriteCallbackGuard {
+            result: self.0.callback_substate_mut(|state| callback(state)),
             state: self,
-            result: (),
         }
     }
 }
