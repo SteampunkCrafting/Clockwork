@@ -191,11 +191,7 @@ where
     /// Constructs a write callback guard,
     /// allowing read-write access to the substate objects
     /// of this clockwork state.
-    pub fn get_mut<T, R>(&mut self) -> WriteCallbackGuard<'_, S>
-    where
-        T: ClockworkState,
-        S: CallbackSubstate<T>,
-    {
+    pub fn get_mut(&mut self) -> WriteCallbackGuard<'_, S> {
         WriteCallbackGuard {
             state: self,
             result: (),
