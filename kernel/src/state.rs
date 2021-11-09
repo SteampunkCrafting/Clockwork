@@ -152,7 +152,7 @@ where
 /// A wrapper struct for the engine state that
 /// allows to access the substate objects through
 /// callback guards.
-pub struct EngineState<S>(S)
+pub struct EngineState<S>(pub(crate) S)
 where
     S: ClockworkState;
 
