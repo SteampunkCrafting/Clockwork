@@ -71,7 +71,7 @@ where
 {
     fn initialization(&mut self, state: &mut EngineState<S>) {
         let (internal, graphics, gui) = state.get(|s: &S| init_vulkano(s)).finish();
-        self.inner.insert(internal);
+        let _ = self.inner.insert(internal);
         state
             .get_mut(|s: &mut OptionGraphicsState| **s = Some(graphics))
             .then_get_mut(|(), s: &mut OptionGui| **s = Some(gui))
