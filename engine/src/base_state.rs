@@ -1,9 +1,9 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::{prelude::Gui, state::OptionGraphicsState};
+use graphics::state::OptionGraphicsState;
 use kernel::{
-    prelude::ClockworkState,
+    prelude::{BaseEvent, ClockworkState},
     state::{CallbackSubstate, Substate},
 };
 use main_loop::{
@@ -34,7 +34,7 @@ where
     ecs: LegionState,
 
     #[builder(setter(skip))]
-    main_loop_state: MainLoopState,
+    main_loop_state: MainLoopState<BaseEvent>,
 
     assets: Assets<C>,
 

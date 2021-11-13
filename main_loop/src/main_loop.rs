@@ -1,8 +1,9 @@
-use crate::event::Event;
-use crate::state::*;
+use crate::state::{IOState, MainLoopState};
+use crate::state::{Input, Statistics};
 use egui_winit_vulkano::Gui;
+use kernel::base_event::FromIntoBaseEvent;
+use kernel::log::*;
 use kernel::prelude::*;
-use log::*;
 use std::{
     ops::{Deref, DerefMut},
     *,
@@ -28,17 +29,14 @@ impl DerefMut for OptionGui {
     }
 }
 
-/// A winit-based main loop
-pub fn main_loop<S>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, Event>)
+pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
-    S: ClockworkState
-        + CallbackSubstate<IOState>
-        + CallbackSubstate<MainLoopState>
-        + CallbackSubstate<OptionGui>,
+    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>> + CallbackSubstate<OptionGui>,
+    E: FromIntoBaseEvent,
 {
     /* ---- INITIALIZATION ---- */
     info!("Initializing main loop");
-    let event_loop = EventLoop::<Event>::with_user_event();
+    let event_loop = EventLoop::<E>::with_user_event();
     let event_proxy = event_loop.create_proxy();
 
     /* -- ADDING EVENT LOOP OBJECT TO THE STATE -- */
@@ -51,7 +49,7 @@ where
     /* -- INITIALIZING MECHANISMS -- */
     info!("Finished initialization of the main loop");
     info!("Initializing mechanisms");
-    mechanisms.clink_event(&mut state, Event::Initialization);
+    mechanisms.clink_event(&mut state, BaseEvent::Initialization.into());
     info!("Finished initializing mechanisms");
 
     /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
@@ -70,7 +68,6 @@ where
     let mut draw_debt = false;
     let mut ticks_total = 0;
     let mut frames_total = 0;
-
     event_loop.run(move |ev, _, cf| {
         trace!("Handling next event: {:?}", ev);
         let current_time = time::Instant::now();
@@ -87,20 +84,20 @@ where
 
         /* ---- HANDLING EVENT ---- */
         match ev {
-            WinitEvent::UserEvent(Event::Tick(delta_time)) => {
-                debug!("Performing tick (delta time: {:?})", delta_time);
-                mechanisms.clink_event(&mut state, Event::Tick(delta_time));
+            WinitEvent::UserEvent(ref ev) if ev.clone().into() == BaseEvent::Tick => {
+                debug!("Performing tick");
+                mechanisms.clink_event(&mut state, BaseEvent::Tick.into());
                 debug!("Finished tick");
             }
-            WinitEvent::UserEvent(Event::Draw(delta_time)) => {
-                debug!("Performing draw call (delta time: {:?})", delta_time);
-                mechanisms.clink_event(&mut state, Event::Draw(delta_time));
+            WinitEvent::UserEvent(ref ev) if ev.clone().into() == BaseEvent::Draw => {
+                debug!("Performing draw call");
+                mechanisms.clink_event(&mut state, BaseEvent::Draw.into());
                 debug!("Finished draw call");
             }
             WinitEvent::LoopDestroyed => {
                 info!("Terminating main loop");
                 info!("Terminating mechanisms");
-                mechanisms.clink_event(&mut state, Event::Termination);
+                mechanisms.clink_event(&mut state, BaseEvent::Termination.into());
                 info!("Finished terminating mechanisms");
             }
             WinitEvent::WindowEvent {
@@ -164,7 +161,7 @@ where
                         last_tick_start_at = time::Instant::now();
                         tick_debt -= 1f32;
                         event_proxy
-                            .send_event(Event::Tick(tick_delta))
+                            .send_event(BaseEvent::Tick.into())
                             .map_or((), |_| ())
                     }
                     (_, draw_delta) if draw_debt => {
@@ -173,7 +170,7 @@ where
                         draw_debt = false;
                         last_draw_start_at = time::Instant::now();
                         event_proxy
-                            .send_event(Event::Draw(draw_delta))
+                            .send_event(BaseEvent::Draw.into())
                             .map_or((), |_| ());
                     }
                     (tick_delta, draw_delta) => {
@@ -194,6 +191,8 @@ where
                 state
                     .get_mut(
                         |IOState {
+                             tick_delta_time,
+                             draw_delta_time,
                              statistics:
                                  Statistics {
                                      ticks_total: state_ticks_total,
@@ -208,6 +207,9 @@ where
                             *state_frames_total = frames_total;
                             *state_tick_period = est_tick_period;
                             *state_draw_period = est_draw_period;
+
+                            *tick_delta_time = est_tick_period;
+                            *draw_delta_time = est_draw_period;
                         },
                     )
                     .finish()

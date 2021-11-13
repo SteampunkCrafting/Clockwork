@@ -1,12 +1,5 @@
-use std::fmt::Debug;
-use std::hash::Hash;
-
 /// A set of constraints, which every valid Clockwork state should satisfy.
 pub trait ClockworkState: Sized + 'static {}
-
-/// A set of constraints, which every valid Clockwork event type should satisfy.
-pub trait ClockworkEvent: Send + Clone + Eq + Hash + Debug + 'static {}
-impl<T> ClockworkEvent for T where T: Send + Clone + Eq + Hash + Debug + 'static {}
 
 /// A substate of a clockwork state.
 ///
@@ -96,8 +89,9 @@ impl<T> ClockworkEvent for T where T: Send + Clone + Eq + Hash + Debug + 'static
 /// Note: this chaining of states may produce a lot of unnecessary code due
 /// to lots of trait delegations. In the future, this should be overcome by
 /// providing macros.
-pub trait Substate<S>: CallbackSubstate<S> + ClockworkState
+pub trait Substate<S>
 where
+    Self: CallbackSubstate<S> + ClockworkState,
     S: ClockworkState + ?Sized,
 {
     /// Gets an immutable reference to the substate
@@ -124,6 +118,7 @@ where
 /// mechanisms.
 pub trait CallbackSubstate<S>
 where
+    Self: ClockworkState,
     S: ClockworkState + ?Sized,
 {
     /// Executes provided callback, supplying its substate reference

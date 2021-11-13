@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
     state::{
         init_vulkano, window_size_dependent_setup, GraphicsState, InternalMechanismState,
@@ -5,13 +7,13 @@ use crate::{
     },
     vulkano_layer::VulkanoLayer,
 };
+use kernel::derive_builder::Builder;
 use kernel::{
-    prelude::{EngineState, Mechanism},
+    base_event::{BaseEventMechanism, FromIntoBaseEvent},
+    prelude::{BaseEvent, EngineState},
     state::{CallbackSubstate, ClockworkState},
 };
-use log::*;
-use main_loop::prelude::{Event, OptionGui};
-use std::time::Duration;
+use main_loop::prelude::OptionGui;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
     format::Format,
@@ -22,101 +24,80 @@ use vulkano::{
 };
 use winit::dpi::PhysicalSize;
 
-pub struct VulkanoGraphics<S>
+#[derive(Builder)]
+#[builder(pattern = "owned", setter(into))]
+pub struct VulkanoGraphics<S, E>
 where
     S: ClockworkState,
+    E: FromIntoBaseEvent,
 {
+    #[builder(setter(skip))]
     inner: Option<InternalMechanismState>,
+
+    #[builder(private, setter(name = "__layers", into = "false"))]
     layers: Vec<Box<dyn VulkanoLayer<S>>>,
+
+    #[builder(setter(skip))]
+    phantom_data: PhantomData<E>,
 }
 
-impl<S> VulkanoGraphics<S>
+impl<S, E> VulkanoGraphics<S, E>
 where
-    S: StateRequirements,
+    S: StateRequirements<E>,
+    E: FromIntoBaseEvent,
 {
-    pub fn builder() -> VulkanoGraphicsBuilder<S> {
+    pub fn builder() -> VulkanoGraphicsBuilder<S, E> {
         Default::default()
     }
 }
 
-pub struct VulkanoGraphicsBuilder<S>(Vec<Box<dyn VulkanoLayer<S>>>)
+impl<S, E> VulkanoGraphicsBuilder<S, E>
 where
-    S: StateRequirements;
-
-impl<S> VulkanoGraphicsBuilder<S>
-where
-    S: StateRequirements,
+    S: StateRequirements<E>,
+    E: FromIntoBaseEvent,
 {
-    pub fn with_layer(mut self, layer: impl VulkanoLayer<S> + 'static) -> Self {
-        self.0.push(Box::new(layer));
+    pub fn add_layer(mut self, layer: impl VulkanoLayer<S> + 'static) -> Self {
+        self.layers
+            .get_or_insert(Default::default())
+            .push(Box::new(layer));
         self
     }
-
-    pub fn build(self) -> VulkanoGraphics<S> {
-        let Self(layers) = self;
-        VulkanoGraphics {
-            inner: None,
-            layers,
-        }
-    }
 }
 
-impl<S> Default for VulkanoGraphicsBuilder<S>
+impl<S, E> BaseEventMechanism<S> for VulkanoGraphics<S, E>
 where
-    S: StateRequirements,
+    S: StateRequirements<E>,
+    E: FromIntoBaseEvent,
 {
-    fn default() -> Self {
-        VulkanoGraphicsBuilder(Default::default())
-    }
-}
-
-impl<S> Mechanism<S, Event> for VulkanoGraphics<S>
-where
-    S: StateRequirements,
-{
-    fn name(&self) -> &'static str {
-        "Vulkano Graphics"
+    fn initialization(&mut self, state: &mut EngineState<S>) {
+        let (internal, graphics, gui) = state.get(|s: &S| init_vulkano(s)).finish();
+        self.inner.insert(internal);
+        state
+            .get_mut(|s: &mut OptionGraphicsState| **s = Some(graphics))
+            .then_get_mut(|(), s: &mut OptionGui| **s = Some(gui))
+            .finish()
     }
 
-    fn clink(&mut self, state: &mut EngineState<S>, event: Event) {
-        match (event, self) {
-            (
-                Event::Draw(_),
-                Self {
-                    layers,
-                    inner: Some(internal_state),
-                },
-            ) => state
-                .get_mut(|state| draw(state, layers, internal_state))
-                .finish(),
-            (
-                Event::Initialization,
-                Self {
-                    inner: inner @ None,
-                    ..
-                },
-            ) => {
-                info!("Initializing Vulkano Graphics");
-                let (internal, graphics_state, gui) =
-                    state.get(|state: &S| init_vulkano(state)).finish();
-                *inner = Some(internal);
-                state
-                    .get_mut(|state: &mut OptionGraphicsState| **state = Some(graphics_state))
-                    .then_get_mut(|(), state: &mut OptionGui| **state = Some(gui))
-                    .finish();
-                info!("Done initializing Vulkano Graphics");
-            }
-            _ => unreachable!(),
-        }
+    fn draw(&mut self, state: &mut EngineState<S>) {
+        let (layers, inner) = (&mut self.layers, self.inner.as_mut().unwrap());
+        state.get_mut(|s| draw(s, layers, inner)).finish();
     }
 
-    fn handled_events(&self) -> Option<&'static [Event]> {
-        Some(&[Event::Initialization, Event::Draw(Duration::ZERO)])
+    fn handled_events(&self) -> Option<Vec<BaseEvent>> {
+        Some(vec![BaseEvent::Initialization, BaseEvent::Draw])
+    }
+
+    fn tick(&mut self, _: &mut EngineState<S>) {
+        unreachable!()
+    }
+
+    fn termination(&mut self, _: &mut EngineState<S>) {
+        unreachable!()
     }
 }
 
 /// Draws on the window by means of activating VulkanoLayers
-fn draw<S>(
+fn draw<S, E>(
     state: &mut S,
     layers: &mut Vec<Box<dyn VulkanoLayer<S>>>,
     InternalMechanismState {
@@ -126,7 +107,8 @@ fn draw<S>(
         framebuffers,
     }: &mut InternalMechanismState,
 ) where
-    S: StateRequirements,
+    S: StateRequirements<E>,
+    E: FromIntoBaseEvent,
 {
     let (mut target_image_size, render_pass, device, queue) = {
         let mut x = None;

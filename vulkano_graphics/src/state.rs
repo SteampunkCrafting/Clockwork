@@ -1,6 +1,9 @@
 use egui_winit_vulkano::Gui;
-use kernel::state::{CallbackSubstate, ClockworkState};
-use log::{debug, info, trace};
+use kernel::log::{debug, info, trace};
+use kernel::{
+    base_event::FromIntoBaseEvent,
+    state::{CallbackSubstate, ClockworkState},
+};
 use main_loop::{
     prelude::{OptionGui, Window},
     state::MainLoopState,
@@ -53,24 +56,29 @@ pub(crate) struct InternalMechanismState {
     pub framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
 }
 
-pub trait StateRequirements:
-    CallbackSubstate<MainLoopState>
-    + CallbackSubstate<OptionGraphicsState>
-    + CallbackSubstate<OptionGui>
-    + ClockworkState
-{
-}
-impl<T> StateRequirements for T where
-    T: CallbackSubstate<MainLoopState>
+pub trait StateRequirements<E>
+where
+    Self: CallbackSubstate<MainLoopState<E>>
         + CallbackSubstate<OptionGraphicsState>
         + CallbackSubstate<OptionGui>
-        + ClockworkState
+        + ClockworkState,
+    E: FromIntoBaseEvent,
+{
+}
+impl<T, E> StateRequirements<E> for T
+where
+    T: CallbackSubstate<MainLoopState<E>>
+        + CallbackSubstate<OptionGraphicsState>
+        + CallbackSubstate<OptionGui>
+        + ClockworkState,
+    E: FromIntoBaseEvent,
 {
 }
 
-pub(crate) fn init_vulkano<S>(engine_state: &S) -> (InternalMechanismState, GraphicsState, Gui)
+pub(crate) fn init_vulkano<S, E>(engine_state: &S) -> (InternalMechanismState, GraphicsState, Gui)
 where
-    S: StateRequirements,
+    S: StateRequirements<E>,
+    E: FromIntoBaseEvent,
 {
     /* ---- INSTANCE, SURFACE, GPU ---- */
     trace!("Creating Vulkan Instance");

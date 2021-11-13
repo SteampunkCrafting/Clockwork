@@ -1,7 +1,7 @@
-use crate::event::Event;
-use derive_builder::Builder;
-use getset::Getters;
-use kernel::prelude::ClockworkState;
+use kernel::derive_builder::Builder;
+use kernel::event::ClockworkEvent;
+use kernel::getset::Getters;
+use kernel::prelude::{BaseEvent, ClockworkState};
 use std::{collections::HashSet, time};
 use winit::event::VirtualKeyCode;
 use winit::event_loop::EventLoop;
@@ -9,6 +9,9 @@ use winit::event_loop::EventLoop;
 #[derive(Getters, Builder)]
 #[builder(pattern = "owned", setter(into, skip, prefix = "with"))]
 pub struct IOState {
+    pub tick_delta_time: time::Duration,
+    pub draw_delta_time: time::Duration,
+
     /// A desired average tick period (an inverse of fps)
     #[builder(setter, default = "std::time::Duration::from_secs_f32(1f32 / 20f32)")]
     pub desired_tick_period: time::Duration,
@@ -32,10 +35,20 @@ impl ClockworkState for IOState {}
 /// on the window system.
 /// Controlled by the main_loop of this crate,
 /// the content of this struct is `Some` only at the initialization stage.
-#[derive(Default)]
-pub struct MainLoopState(pub Option<EventLoop<Event>>);
+pub struct MainLoopState<E = BaseEvent>(pub Option<EventLoop<E>>)
+where
+    E: ClockworkEvent;
 
-impl ClockworkState for MainLoopState {}
+impl<E> ClockworkState for MainLoopState<E> where E: ClockworkEvent {}
+
+impl<E> Default for MainLoopState<E>
+where
+    E: ClockworkEvent,
+{
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
 
 impl IOState {
     /// Creates new builder of the IOState

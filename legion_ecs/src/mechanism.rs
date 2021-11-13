@@ -1,22 +1,19 @@
 use std::collections::HashMap;
 
 use crate::state::LegionState;
-use kernel::prelude::*;
+use kernel::{event::ClockworkEvent, prelude::*};
 pub use legion::system;
 use legion::{systems::Builder, systems::ParallelRunnable, Schedule};
 
 pub struct LegionSystems<E>(HashMap<E, Schedule>)
 where
     E: ClockworkEvent;
+
 impl<S, E> Mechanism<S, E> for LegionSystems<E>
 where
-    S: ClockworkState + CallbackSubstate<LegionState>,
+    S: CallbackSubstate<LegionState>,
     E: ClockworkEvent,
 {
-    fn name(&self) -> &'static str {
-        "Legion systems"
-    }
-
     fn clink(&mut self, state: &mut EngineState<S>, event: E) {
         state
             .get_mut(
@@ -26,6 +23,10 @@ where
                 },
             )
             .finish()
+    }
+
+    fn handled_events(&self) -> Option<Vec<E>> {
+        None
     }
 }
 impl<E> LegionSystems<E>
