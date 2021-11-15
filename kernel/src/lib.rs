@@ -30,7 +30,7 @@ pub mod abstract_runtime {
 /// Clockwork object definitions.
 pub mod clockwork;
 
-/// A set of utilities for
+/// A set of utilities for a standard Clockwork runtime.
 pub mod standard_runtime {
     /* ---- PRIVATE ---- */
     mod event;
