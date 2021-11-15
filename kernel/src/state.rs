@@ -1,5 +1,26 @@
 /// A set of constraints, which every valid Clockwork state should satisfy.
-pub trait ClockworkState: Sized + 'static {}
+///
+/// This trait is implemented automatically on every type, which
+/// is theoretically possible to use as a state.
+///
+/// Although, it is still required to manually mark the data structure
+/// as a Clockwork state via the `ClockworkState` trait.
+pub trait ClockworkStateRequirements
+where
+    Self: Sized + 'static,
+{
+}
+impl<T> ClockworkStateRequirements for T where T: Sized + 'static {}
+
+/// A marker trait for the clockwork state.
+///
+/// Must be implemented on every substate of a clockwork state,
+/// as well as on the superstate.
+pub trait ClockworkState
+where
+    Self: ClockworkStateRequirements,
+{
+}
 
 /// A substate of a clockwork state.
 ///
