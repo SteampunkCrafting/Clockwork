@@ -14,7 +14,7 @@ use graphics::{
     vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::GraphicsPipeline},
     vulkano_layer,
 };
-use kernel::state::CallbackSubstate;
+use kernel::abstract_runtime::CallbackSubstate;
 use legion_ecs::{prelude::*, state::LegionState};
 use physics::state::PhysicsState;
 use scene_utils::{

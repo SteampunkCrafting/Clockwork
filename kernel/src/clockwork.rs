@@ -1,17 +1,17 @@
 use crate::{
-    base_event::{BaseEvent, BaseEventMechanism, BaseEventMechanismWrapper, FromIntoBaseEvent},
-    derive_builder::Builder,
-    event::ClockworkEvent,
-    log::*,
-    main_loop::*,
-    mechanism::*,
-    state::*,
+    abstract_runtime::{
+        ClockworkEvent, ClockworkState, EngineState, MainLoop, Mechanism, Mechanisms,
+    },
+    standard_runtime::{
+        FromIntoStandardEvent, StandardEvent, StandardMechanism, StandardMechanismWrapper,
+    },
+    util::{derive_builder::Builder, log::*},
 };
 
 /// `Clockwork` is a type, which represents the game engine.
 #[derive(Builder)]
 #[builder(pattern = "owned", setter(into))]
-pub struct Clockwork<S, E = BaseEvent>
+pub struct Clockwork<S, E = StandardEvent>
 where
     S: ClockworkState,
     E: ClockworkEvent,
@@ -59,11 +59,11 @@ where
     /// then adds this mechanism to the engine.
     ///
     /// This method is only available for Clockwork, whose events are convertible to BaseEvents.
-    pub fn add_base_event_mechanism(self, mechanism: impl BaseEventMechanism<S> + 'static) -> Self
+    pub fn add_standard_mechanism(self, mechanism: impl StandardMechanism<S> + 'static) -> Self
     where
-        E: FromIntoBaseEvent,
+        E: FromIntoStandardEvent,
     {
-        self.add_mechanism(BaseEventMechanismWrapper::from(mechanism))
+        self.add_mechanism(StandardMechanismWrapper::from(mechanism))
     }
 }
 

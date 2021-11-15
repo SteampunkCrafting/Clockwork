@@ -1,6 +1,7 @@
 use kernel::{
-    base_event::BaseEventMechanism,
-    prelude::{BaseEvent, CallbackSubstate, EngineState},
+    abstract_runtime::{CallbackSubstate, EngineState},
+    prelude::StandardEvent,
+    standard_runtime::StandardMechanism,
 };
 use main_loop::state::IOState;
 use rapier3d::{dynamics::IntegrationParameters, pipeline::PhysicsPipeline};
@@ -10,7 +11,7 @@ use crate::state::PhysicsState;
 #[derive(Default)]
 pub struct Rapier3DTicker(PhysicsPipeline, IntegrationParameters);
 
-impl<S> BaseEventMechanism<S> for Rapier3DTicker
+impl<S> StandardMechanism<S> for Rapier3DTicker
 where
     S: CallbackSubstate<PhysicsState> + CallbackSubstate<IOState>,
 {
@@ -54,8 +55,8 @@ where
             .finish()
     }
 
-    fn handled_events(&self) -> Option<Vec<BaseEvent>> {
-        Some(vec![BaseEvent::Tick])
+    fn handled_events(&self) -> Option<Vec<StandardEvent>> {
+        Some(vec![StandardEvent::Tick])
     }
 
     fn initialization(&mut self, _: &mut EngineState<S>) {

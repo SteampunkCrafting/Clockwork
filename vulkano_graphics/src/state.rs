@@ -1,8 +1,8 @@
 use egui_winit_vulkano::Gui;
-use kernel::log::{debug, info, trace};
+use kernel::util::log::{debug, info, trace};
 use kernel::{
-    base_event::FromIntoBaseEvent,
-    state::{CallbackSubstate, ClockworkState},
+    abstract_runtime::{CallbackSubstate, ClockworkState},
+    standard_runtime::FromIntoStandardEvent,
 };
 use main_loop::{
     prelude::{OptionGui, Window},
@@ -62,7 +62,7 @@ where
         + CallbackSubstate<OptionGraphicsState>
         + CallbackSubstate<OptionGui>
         + ClockworkState,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
 }
 impl<T, E> StateRequirements<E> for T
@@ -71,14 +71,14 @@ where
         + CallbackSubstate<OptionGraphicsState>
         + CallbackSubstate<OptionGui>
         + ClockworkState,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
 }
 
 pub(crate) fn init_vulkano<S, E>(engine_state: &S) -> (InternalMechanismState, GraphicsState, Gui)
 where
     S: StateRequirements<E>,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     /* ---- INSTANCE, SURFACE, GPU ---- */
     trace!("Creating Vulkan Instance");

@@ -1,4 +1,4 @@
-use kernel::{prelude::ClockworkState, sync::ReadLock};
+use kernel::{abstract_runtime::ClockworkState, util::sync::ReadLock};
 use std::{cell::RefCell, collections::HashMap, hash::Hash};
 
 pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + 'static {}

@@ -1,7 +1,6 @@
-use kernel::derive_builder::Builder;
-use kernel::event::ClockworkEvent;
-use kernel::getset::Getters;
-use kernel::prelude::{BaseEvent, ClockworkState};
+use kernel::abstract_runtime::{ClockworkEvent, ClockworkState};
+use kernel::prelude::StandardEvent;
+use kernel::util::{derive_builder::Builder, getset::Getters};
 use std::{collections::HashSet, time};
 use winit::event::VirtualKeyCode;
 use winit::event_loop::EventLoop;
@@ -35,7 +34,7 @@ impl ClockworkState for IOState {}
 /// on the window system.
 /// Controlled by the main_loop of this crate,
 /// the content of this struct is `Some` only at the initialization stage.
-pub struct MainLoopState<E = BaseEvent>(pub Option<EventLoop<E>>)
+pub struct MainLoopState<E = StandardEvent>(pub Option<EventLoop<E>>)
 where
     E: ClockworkEvent;
 

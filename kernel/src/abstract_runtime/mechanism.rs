@@ -1,8 +1,6 @@
-use crate::{
-    event::ClockworkEvent,
-    prelude::{ClockworkState, EngineState},
-};
-use itertools::Itertools;
+use super::event::*;
+use super::state::*;
+use itertools::*;
 use std::collections::HashMap;
 
 /// Mechanism is an event handler to clockwork events.

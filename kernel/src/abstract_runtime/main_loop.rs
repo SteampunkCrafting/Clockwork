@@ -1,7 +1,4 @@
-use crate::{
-    event::ClockworkEvent,
-    prelude::{ClockworkState, EngineState, Mechanisms},
-};
+use super::{event::ClockworkEvent, mechanism::Mechanisms, state::ClockworkState, EngineState};
 
 /// A main loop trait.
 ///

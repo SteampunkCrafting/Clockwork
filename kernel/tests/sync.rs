@@ -1,4 +1,4 @@
-use spc_clockwork_kernel::sync::*;
+use spc_clockwork_kernel::util::sync::WriteLock;
 use std::thread;
 
 #[test]

@@ -1,27 +1,54 @@
 /* ---- PRELUDE ---- */
 pub mod prelude {
-    pub use crate::base_event::BaseEvent;
-    pub use crate::clockwork::*;
-    pub use crate::main_loop::MainLoop;
-    pub use crate::mechanism::*;
-    pub use crate::state::*;
-    pub use crate::sync::Lock;
+    pub use crate::clockwork::Clockwork;
+    pub use crate::standard_runtime::StandardEvent;
+    pub use crate::util::itertools::*;
+    pub use crate::util::log::*;
 }
 
-/* ---- REEXPORTS ---- */
-pub extern crate derive_builder;
-pub extern crate getset;
-pub extern crate itertools;
-pub extern crate log;
-
 /* ---- MODULES ---- */
-pub mod base_event;
+/// A set of very basic definitions,
+/// required for every clockwork operation.
+pub mod abstract_runtime {
+    /* ---- PRIVATE ---- */
+    /// Abstract Clockwork Event definitions.
+    mod event;
+    /// Abstract Clockwork main loop definition.
+    pub mod main_loop;
+    /// Abstract Clockwork Mechanism definitions.
+    mod mechanism;
+    /// Abstract Clockwork State definitions.
+    mod state;
+
+    /* ---- PUBLIC ---- */
+    pub use event::*;
+    pub use main_loop::*;
+    pub use mechanism::*;
+    pub use state::*;
+}
+
+/// Clockwork object definitions.
 pub mod clockwork;
-pub mod event;
-pub mod main_loop;
-pub mod mechanism;
-pub mod state;
-pub mod sync;
+
+/// A set of utilities for
+pub mod standard_runtime {
+    /* ---- PRIVATE ---- */
+    mod event;
+    mod mechanism;
+
+    /* ---- PUBLIC ---- */
+    pub use event::*;
+    pub use mechanism::*;
+}
+
 pub mod util {
+    /* ---- LOCAL UTIL MODULES ---- */
     pub mod init_state;
+    pub mod sync;
+
+    /* ---- REEXPORTS ---- */
+    pub use derive_builder;
+    pub use getset;
+    pub use itertools;
+    pub use log;
 }

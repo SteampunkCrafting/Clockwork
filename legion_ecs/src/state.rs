@@ -1,4 +1,4 @@
-use kernel::prelude::ClockworkState;
+use kernel::abstract_runtime::ClockworkState;
 use legion::{storage::IntoComponentSource, systems::Resource, Resources, World};
 
 #[derive(Default)]

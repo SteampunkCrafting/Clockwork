@@ -1,5 +1,5 @@
 use crate::state::OptionGraphicsState;
-use kernel::state::CallbackSubstate;
+use kernel::abstract_runtime::CallbackSubstate;
 use vulkano::command_buffer::{
     pool::standard::StandardCommandPoolAlloc, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };

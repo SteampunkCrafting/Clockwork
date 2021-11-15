@@ -1,4 +1,4 @@
-use kernel::prelude::ClockworkState;
+use kernel::abstract_runtime::ClockworkState;
 use rapier3d::{
     dynamics::{CCDSolver, JointSet, RigidBodySet},
     geometry::{BroadPhase, ColliderSet, NarrowPhase},

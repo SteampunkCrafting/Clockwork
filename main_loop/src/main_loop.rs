@@ -1,9 +1,9 @@
 use crate::state::{IOState, MainLoopState};
 use crate::state::{Input, Statistics};
 use egui_winit_vulkano::Gui;
-use kernel::base_event::FromIntoBaseEvent;
-use kernel::log::*;
+use kernel::abstract_runtime::{CallbackSubstate, ClockworkState, EngineState, Mechanisms};
 use kernel::prelude::*;
+use kernel::standard_runtime::FromIntoStandardEvent;
 use std::{
     ops::{Deref, DerefMut},
     *,
@@ -32,7 +32,7 @@ impl DerefMut for OptionGui {
 pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
     S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>> + CallbackSubstate<OptionGui>,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     /* ---- INITIALIZATION ---- */
     info!("Initializing main loop");
@@ -49,7 +49,7 @@ where
     /* -- INITIALIZING MECHANISMS -- */
     info!("Finished initialization of the main loop");
     info!("Initializing mechanisms");
-    mechanisms.clink_event(&mut state, BaseEvent::Initialization.into());
+    mechanisms.clink_event(&mut state, StandardEvent::Initialization.into());
     info!("Finished initializing mechanisms");
 
     /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
@@ -84,20 +84,20 @@ where
 
         /* ---- HANDLING EVENT ---- */
         match ev {
-            WinitEvent::UserEvent(ref ev) if ev.clone().into() == BaseEvent::Tick => {
+            WinitEvent::UserEvent(ref ev) if ev.clone().into() == StandardEvent::Tick => {
                 debug!("Performing tick");
-                mechanisms.clink_event(&mut state, BaseEvent::Tick.into());
+                mechanisms.clink_event(&mut state, StandardEvent::Tick.into());
                 debug!("Finished tick");
             }
-            WinitEvent::UserEvent(ref ev) if ev.clone().into() == BaseEvent::Draw => {
+            WinitEvent::UserEvent(ref ev) if ev.clone().into() == StandardEvent::Draw => {
                 debug!("Performing draw call");
-                mechanisms.clink_event(&mut state, BaseEvent::Draw.into());
+                mechanisms.clink_event(&mut state, StandardEvent::Draw.into());
                 debug!("Finished draw call");
             }
             WinitEvent::LoopDestroyed => {
                 info!("Terminating main loop");
                 info!("Terminating mechanisms");
-                mechanisms.clink_event(&mut state, BaseEvent::Termination.into());
+                mechanisms.clink_event(&mut state, StandardEvent::Termination.into());
                 info!("Finished terminating mechanisms");
             }
             WinitEvent::WindowEvent {
@@ -161,7 +161,7 @@ where
                         last_tick_start_at = time::Instant::now();
                         tick_debt -= 1f32;
                         event_proxy
-                            .send_event(BaseEvent::Tick.into())
+                            .send_event(StandardEvent::Tick.into())
                             .map_or((), |_| ())
                     }
                     (_, draw_delta) if draw_debt => {
@@ -170,7 +170,7 @@ where
                         draw_debt = false;
                         last_draw_start_at = time::Instant::now();
                         event_proxy
-                            .send_event(BaseEvent::Draw.into())
+                            .send_event(StandardEvent::Draw.into())
                             .map_or((), |_| ());
                     }
                     (tick_delta, draw_delta) => {

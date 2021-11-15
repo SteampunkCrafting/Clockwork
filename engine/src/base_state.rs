@@ -3,8 +3,8 @@ use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use graphics::state::OptionGraphicsState;
 use kernel::{
-    prelude::{BaseEvent, ClockworkState},
-    state::{CallbackSubstate, Substate},
+    abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
+    prelude::StandardEvent,
 };
 use main_loop::{
     prelude::{IOState, OptionGui},
@@ -34,7 +34,7 @@ where
     ecs: LegionState,
 
     #[builder(setter(skip))]
-    main_loop_state: MainLoopState<BaseEvent>,
+    main_loop_state: MainLoopState<StandardEvent>,
 
     assets: Assets<C>,
 

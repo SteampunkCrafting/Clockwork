@@ -7,11 +7,13 @@ use crate::{
     },
     vulkano_layer::VulkanoLayer,
 };
-use kernel::derive_builder::Builder;
 use kernel::{
-    base_event::{BaseEventMechanism, FromIntoBaseEvent},
-    prelude::{BaseEvent, EngineState},
-    state::{CallbackSubstate, ClockworkState},
+    abstract_runtime::{CallbackSubstate, ClockworkState, EngineState},
+    util::derive_builder::Builder,
+};
+use kernel::{
+    prelude::StandardEvent,
+    standard_runtime::{FromIntoStandardEvent, StandardMechanism},
 };
 use main_loop::prelude::OptionGui;
 use vulkano::{
@@ -29,7 +31,7 @@ use winit::dpi::PhysicalSize;
 pub struct VulkanoGraphics<S, E>
 where
     S: ClockworkState,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     #[builder(setter(skip))]
     inner: Option<InternalMechanismState>,
@@ -44,7 +46,7 @@ where
 impl<S, E> VulkanoGraphics<S, E>
 where
     S: StateRequirements<E>,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     pub fn builder() -> VulkanoGraphicsBuilder<S, E> {
         Default::default()
@@ -54,7 +56,7 @@ where
 impl<S, E> VulkanoGraphicsBuilder<S, E>
 where
     S: StateRequirements<E>,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     pub fn add_layer(mut self, layer: impl VulkanoLayer<S> + 'static) -> Self {
         self.layers
@@ -64,10 +66,10 @@ where
     }
 }
 
-impl<S, E> BaseEventMechanism<S> for VulkanoGraphics<S, E>
+impl<S, E> StandardMechanism<S> for VulkanoGraphics<S, E>
 where
     S: StateRequirements<E>,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     fn initialization(&mut self, state: &mut EngineState<S>) {
         let (internal, graphics, gui) = state.get(|s: &S| init_vulkano(s)).finish();
@@ -83,8 +85,8 @@ where
         state.get_mut(|s| draw(s, layers, inner)).finish();
     }
 
-    fn handled_events(&self) -> Option<Vec<BaseEvent>> {
-        Some(vec![BaseEvent::Initialization, BaseEvent::Draw])
+    fn handled_events(&self) -> Option<Vec<StandardEvent>> {
+        Some(vec![StandardEvent::Initialization, StandardEvent::Draw])
     }
 
     fn tick(&mut self, _: &mut EngineState<S>) {
@@ -108,7 +110,7 @@ fn draw<S, E>(
     }: &mut InternalMechanismState,
 ) where
     S: StateRequirements<E>,
-    E: FromIntoBaseEvent,
+    E: FromIntoStandardEvent,
 {
     let (mut target_image_size, render_pass, device, queue) = {
         let mut x = None;
