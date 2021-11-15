@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::{
     state::{
         init_vulkano, window_size_dependent_setup, GraphicsInitState, GraphicsState, GuiState,
@@ -9,12 +7,14 @@ use crate::{
 };
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, EngineState},
-    util::derive_builder::Builder,
+    util::{derive_builder::Builder, sync::WriteLock},
 };
 use kernel::{
     prelude::StandardEvent,
     standard_runtime::{FromIntoStandardEvent, StandardMechanism},
 };
+use main_loop::state::MainLoopState;
+use std::marker::PhantomData;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
     format::Format,
@@ -72,11 +72,15 @@ where
 {
     fn initialization(&mut self, state: &mut EngineState<S>) {
         let (internal, graphics, gui) = state.start_access().get(|s: &S| init_vulkano(s)).finish();
+        let gui = WriteLock::from(gui);
         let _ = self.inner.insert(internal);
         state
             .start_mutate()
             .get_mut(|s: &mut GraphicsInitState| s.initialize(move |_| graphics))
-            .then_get_mut(|(), s: &mut GuiState| s.initialize(move |_| gui))
+            .get_mut(|s: &mut GuiState| s.initialize(gui.clone()))
+            .get_mut(|s: &mut MainLoopState<E>| {
+                s.add_event_callback(move |ev| gui.lock_mut().update(ev))
+            })
             .finish()
     }
 
@@ -216,7 +220,7 @@ fn draw<S, E>(
 
         let mut cb = None;
         CallbackSubstate::<GuiState>::callback_substate_mut(state, |gui| {
-            cb = Some(gui.get_init_mut().draw_on_subpass_image([width, height]));
+            cb = Some(gui.init_draw_on_subpass_image([width, height]));
         });
         builder.execute_commands(cb.unwrap()).unwrap();
 

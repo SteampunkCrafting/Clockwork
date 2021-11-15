@@ -1,11 +1,10 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::{prelude::Gui, state::GraphicsInitState};
+use graphics::state::{GraphicsInitState, GuiState};
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
     prelude::StandardEvent,
-    util::init_state::InitState,
 };
 use main_loop::{prelude::IOState, state::MainLoopState};
 use physics::state::PhysicsState;
@@ -84,7 +83,7 @@ where
         resources.insert(IOState::default());
 
         /* ---- INITIALIZING GUI ---- */
-        resources.insert(InitState::<(), Gui>::default());
+        resources.insert(GuiState::default());
 
         /* ---- RETURNING ---- */
         Ok(base_state)
@@ -185,15 +184,15 @@ where
     }
 }
 
-impl<C> Substate<MainLoopState> for BaseState<C>
+impl<C> Substate<MainLoopState<StandardEvent>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &MainLoopState {
+    fn substate(&self) -> &MainLoopState<StandardEvent> {
         &self.main_loop_state
     }
 
-    fn substate_mut(&mut self) -> &mut MainLoopState {
+    fn substate_mut(&mut self) -> &mut MainLoopState<StandardEvent> {
         &mut self.main_loop_state
     }
 }
@@ -211,18 +210,15 @@ where
     }
 }
 
-impl<C> CallbackSubstate<InitState<(), Gui>> for BaseState<C>
+impl<C> CallbackSubstate<GuiState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&InitState<(), Gui>) -> R) -> R {
+    fn callback_substate<R>(&self, callback: impl FnOnce(&GuiState) -> R) -> R {
         callback(&self.ecs.resources.get().unwrap())
     }
 
-    fn callback_substate_mut<R>(
-        &mut self,
-        callback: impl FnOnce(&mut InitState<(), Gui>) -> R,
-    ) -> R {
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut GuiState) -> R) -> R {
         callback(&mut self.ecs.resources.get_mut().unwrap())
     }
 }

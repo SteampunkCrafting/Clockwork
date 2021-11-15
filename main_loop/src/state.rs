@@ -1,9 +1,9 @@
 use kernel::abstract_runtime::{ClockworkEvent, ClockworkState};
-use kernel::prelude::StandardEvent;
+use kernel::util::init_state::InitState;
 use kernel::util::{derive_builder::Builder, getset::Getters};
 use std::{collections::HashSet, time};
-use winit::event::VirtualKeyCode;
-use winit::event_loop::EventLoop;
+use winit::event::{Event, VirtualKeyCode};
+use winit::event_loop::{EventLoop, EventLoopProxy};
 
 #[derive(Getters, Builder)]
 #[builder(pattern = "owned", setter(into, skip, prefix = "with"))]
@@ -28,26 +28,73 @@ pub struct IOState {
 
 impl ClockworkState for IOState {}
 
+pub struct MainLoopState<E>
+where
+    E: ClockworkEvent,
+{
+    inner: InitState<
+        (
+            EventLoop<E>,
+            EventLoopProxy<E>,
+            Vec<Box<dyn FnMut(&Event<E>)>>,
+        ),
+        Vec<Box<dyn FnMut(&Event<E>)>>,
+    >,
+}
+impl<E> Default for MainLoopState<E>
+where
+    E: ClockworkEvent,
+{
+    fn default() -> Self {
+        let event_loop = EventLoop::<E>::with_user_event();
+        let proxy = event_loop.create_proxy();
+        Self {
+            inner: InitState::Uninit((event_loop, proxy, Default::default())),
+        }
+    }
+}
+
 /// Container for Winit event loop.
 ///
 /// Required for the initialization of mechanisms, whose functionality depends
 /// on the window system.
 /// Controlled by the main_loop of this crate,
 /// the content of this struct is `Some` only at the initialization stage.
-pub struct MainLoopState<E = StandardEvent>(pub Option<EventLoop<E>>)
-where
-    E: ClockworkEvent;
-
-impl<E> ClockworkState for MainLoopState<E> where E: ClockworkEvent {}
-
-impl<E> Default for MainLoopState<E>
+impl<E> MainLoopState<E>
 where
     E: ClockworkEvent,
 {
-    fn default() -> Self {
-        Self(Default::default())
+    pub fn uninit_event_loop(&self) -> &EventLoop<E> {
+        &self.inner.get_uninit().0
+    }
+
+    pub fn add_event_callback(&mut self, callback: impl FnMut(&Event<E>) + 'static) {
+        match &mut self.inner {
+            InitState::Uninit((_, _, v)) => v,
+            InitState::Init(v) => v,
+            InitState::Terminated => panic!("The MainLoopState is terminated."),
+        }
+        .push(Box::from(callback))
+    }
+
+    pub(crate) fn notify(&mut self, event: &Event<E>) {
+        self.inner
+            .get_init_mut()
+            .iter_mut()
+            .for_each(|callback| callback(event))
+    }
+
+    pub(crate) fn initialize(&mut self) -> (EventLoop<E>, EventLoopProxy<E>) {
+        let mut ep = None;
+        self.inner.initialize(|(e, p, v)| {
+            ep = Some((e, p));
+            v
+        });
+        ep.unwrap()
     }
 }
+
+impl<E> ClockworkState for MainLoopState<E> where E: ClockworkEvent {}
 
 impl IOState {
     /// Creates new builder of the IOState

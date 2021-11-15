@@ -3,11 +3,13 @@ use std::sync::Arc;
 use egui_winit_vulkano::Gui;
 use kernel::util::init_state::InitState;
 use kernel::util::log::{debug, info, trace};
+use kernel::util::sync::WriteLock;
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState},
     standard_runtime::FromIntoStandardEvent,
 };
 use main_loop::{prelude::Window, state::MainLoopState};
+use vulkano::command_buffer::SecondaryAutoCommandBuffer;
 use vulkano::{
     device::{physical::PhysicalDevice, Device, DeviceExtensions, Queue},
     format::Format,
@@ -38,7 +40,46 @@ pub(crate) struct InternalMechanismState {
     pub framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
 }
 
-pub(crate) type GuiState = InitState<(), Gui>;
+pub struct GuiState {
+    inner: InitState<
+        Box<dyn Fn(egui::CtxRef) + Send>,
+        (Box<dyn Fn(egui::CtxRef) + Send>, WriteLock<Gui>),
+    >,
+}
+
+impl ClockworkState for GuiState {}
+
+impl GuiState {
+    pub fn update_ui(&mut self, callback: impl Fn(egui::CtxRef) + Send + 'static) {
+        *match &mut self.inner {
+            InitState::Uninit(x) => x,
+            InitState::Init((x, _)) => x,
+            _ => panic!("Gui state is terminated -- cannot update UI"),
+        } = Box::from(callback)
+    }
+
+    pub(crate) fn initialize(&mut self, gui: WriteLock<Gui>) {
+        self.inner.initialize(|draw_fn| (draw_fn, gui))
+    }
+
+    pub(crate) fn init_draw_on_subpass_image(
+        &mut self,
+        image_dimensions: [u32; 2],
+    ) -> SecondaryAutoCommandBuffer {
+        let (draw_fn, gui) = self.inner.get_init_mut();
+        let mut gui = gui.lock_mut();
+        gui.immediate_ui(|gui| draw_fn(gui.context()));
+        gui.draw_on_subpass_image(image_dimensions)
+    }
+}
+
+impl Default for GuiState {
+    fn default() -> Self {
+        Self {
+            inner: InitState::from(Box::from(|_| ()) as Box<dyn Fn(egui::CtxRef) + Send>),
+        }
+    }
+}
 
 pub trait StateRequirements<E>
 where
@@ -75,16 +116,11 @@ where
 
     let surface = {
         let mut surface = None;
-        CallbackSubstate::callback_substate(engine_state, |MainLoopState(event_loop)| {
-            trace!("Getting Winit Event Loop from shared state");
-            let event_loop = event_loop
-                .as_deref()
-                .expect("Missing event loop during initialization");
-
+        CallbackSubstate::callback_substate(engine_state, |ml: &MainLoopState<E>| {
             trace!("Instantiating window and surface");
             surface = Some(
                 WindowBuilder::new()
-                    .build_vk_surface(event_loop, instance.clone())
+                    .build_vk_surface(ml.uninit_event_loop(), instance.clone())
                     .expect("Failed to build surface"),
             );
         });

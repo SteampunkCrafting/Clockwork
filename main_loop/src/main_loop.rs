@@ -1,36 +1,19 @@
 use crate::state::{IOState, MainLoopState};
 use crate::state::{Input, Statistics};
-use egui_winit_vulkano::Gui;
 use kernel::abstract_runtime::{CallbackSubstate, EngineState, Mechanisms};
 use kernel::prelude::*;
 use kernel::standard_runtime::FromIntoStandardEvent;
-use kernel::util::init_state::InitState;
 use std::*;
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
+    event_loop::ControlFlow,
 };
-
-type GuiState = InitState<(), Gui>;
 
 pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
-    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>> + CallbackSubstate<GuiState>,
+    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>>,
     E: FromIntoStandardEvent,
 {
-    /* ---- INITIALIZATION ---- */
-    info!("Initializing main loop");
-    let event_loop = EventLoop::<E>::with_user_event();
-    let event_proxy = event_loop.create_proxy();
-
-    /* -- ADDING EVENT LOOP OBJECT TO THE STATE -- */
-    info!("Adding winit event loop to the engine state");
-    state
-        .start_mutate()
-        .get_mut(|MainLoopState(el)| *el = Some(event_loop))
-        .finish();
-    info!("Done adding winit event loop to the engine state");
-
     /* -- INITIALIZING MECHANISMS -- */
     info!("Finished initialization of the main loop");
     info!("Initializing mechanisms");
@@ -39,9 +22,9 @@ where
 
     /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
     info!("Retrieving event loop object from the engine state");
-    let event_loop = state
+    let (event_loop, event_proxy) = state
         .start_mutate()
-        .get_mut(|MainLoopState(el)| el.take().unwrap())
+        .get_mut(|s: &mut MainLoopState<E>| s.initialize())
         .finish();
     info!("Done retrieving event loop object from the engine state");
 
@@ -58,10 +41,10 @@ where
         trace!("Handling next event: {:?}", ev);
         let current_time = time::Instant::now();
 
-        /* ---- UPDATING GUI, IF EXISTS ---- */
+        /* ---- NOTIFYING SUBSCRIBERS ABOUT THE EVENT ---- */
         state
             .start_mutate()
-            .get_mut(|gui: &mut GuiState| gui.get_init_mut().update(&ev))
+            .get_mut(|ml: &mut MainLoopState<E>| ml.notify(&ev))
             .finish();
 
         /* ---- HANDLING EVENT ---- */

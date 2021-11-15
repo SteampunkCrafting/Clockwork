@@ -137,3 +137,9 @@ where
     T: ClockworkStateRequirements,
 {
 }
+
+impl<U, T> From<U> for InitState<U, T> {
+    fn from(x: U) -> Self {
+        InitState::Uninit(x)
+    }
+}
