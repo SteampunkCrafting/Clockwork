@@ -41,8 +41,9 @@ pub mod standard_runtime {
     pub use mechanism::*;
 }
 
+/// Utilities
 pub mod util {
-    /* ---- LOCAL UTIL MODULES ---- */
+    /* ---- LOCAL ---- */
     pub mod init_state;
     pub mod sync;
 
