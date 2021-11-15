@@ -1,11 +1,19 @@
+/* ---- PRELUDE ---- */
+pub mod prelude {
+    pub use crate::mechanism::LegionSystems;
+    pub use crate::state::LegionState;
+    pub use legion::*;
+}
+
+/* ---- MODULES ---- */
+/// Mechanism description
 pub mod mechanism;
+
+/// State description
 pub mod state;
 
-pub use legion;
-
-pub mod prelude {
-    pub use crate::mechanism::*;
-    pub use crate::state::*;
-
-    pub use legion::*;
+/// Utilities
+pub mod util {
+    /* ---- REEXPORTS ---- */
+    pub use legion;
 }

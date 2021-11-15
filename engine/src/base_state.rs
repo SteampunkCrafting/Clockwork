@@ -66,7 +66,7 @@ where
         /* ---- ALLOCATING MEMORY ---- */
         let Self { assets, .. } = self;
         let mut base_state = BaseState {
-            ecs: LegionState::default(),
+            ecs: LegionState::builder().build().unwrap(),
             assets: assets.ok_or("Missing assets")?,
             main_loop_state: Default::default(),
             graphics_state: Default::default(),
