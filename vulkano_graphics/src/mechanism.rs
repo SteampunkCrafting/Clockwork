@@ -72,9 +72,10 @@ where
     E: FromIntoStandardEvent,
 {
     fn initialization(&mut self, state: &mut EngineState<S>) {
-        let (internal, graphics, gui) = state.get(|s: &S| init_vulkano(s)).finish();
+        let (internal, graphics, gui) = state.start_access().get(|s: &S| init_vulkano(s)).finish();
         let _ = self.inner.insert(internal);
         state
+            .start_mutate()
             .get_mut(|s: &mut OptionGraphicsState| **s = Some(graphics))
             .then_get_mut(|(), s: &mut OptionGui| **s = Some(gui))
             .finish()
@@ -82,7 +83,10 @@ where
 
     fn draw(&mut self, state: &mut EngineState<S>) {
         let (layers, inner) = (&mut self.layers, self.inner.as_mut().unwrap());
-        state.get_mut(|s| draw(s, layers, inner)).finish();
+        state
+            .start_mutate()
+            .get_mut(|s| draw(s, layers, inner))
+            .finish();
     }
 
     fn handled_events(&self) -> Option<Vec<StandardEvent>> {

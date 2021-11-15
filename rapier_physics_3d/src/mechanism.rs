@@ -18,6 +18,7 @@ where
     fn tick(&mut self, state: &mut EngineState<S>) {
         let Rapier3DTicker(pipeline, integration_parameters) = self;
         state
+            .start_mutate()
             .get_mut(
                 |IOState {
                      ref tick_delta_time,

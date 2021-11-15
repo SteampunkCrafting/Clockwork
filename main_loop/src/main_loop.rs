@@ -42,6 +42,7 @@ where
     /* -- ADDING EVENT LOOP OBJECT TO THE STATE -- */
     info!("Adding winit event loop to the engine state");
     state
+        .start_mutate()
         .get_mut(|MainLoopState(el)| *el = Some(event_loop))
         .finish();
     info!("Done adding winit event loop to the engine state");
@@ -55,6 +56,7 @@ where
     /* -- TAKING BACK EVENT LOOP OBJECT FROM THE STATE -- */
     info!("Retrieving event loop object from the engine state");
     let event_loop = state
+        .start_mutate()
         .get_mut(|MainLoopState(el)| el.take().unwrap())
         .finish();
     info!("Done retrieving event loop object from the engine state");
@@ -74,6 +76,7 @@ where
 
         /* ---- UPDATING GUI, IF EXISTS ---- */
         state
+            .start_mutate()
             .get_mut(|gui: &mut OptionGui| {
                 gui.deref_mut()
                     .as_mut()
@@ -118,6 +121,7 @@ where
                 ..
             } => {
                 state
+                    .start_mutate()
                     .get_mut(
                         |IOState {
                              input:
@@ -138,6 +142,7 @@ where
             }
             WinitEvent::MainEventsCleared => {
                 let (desired_tick_period, desired_min_draw_period) = state
+                    .start_mutate()
                     .get_mut(
                         |IOState {
                              desired_tick_period,
@@ -189,6 +194,7 @@ where
                     }
                 }
                 state
+                    .start_mutate()
                     .get_mut(
                         |IOState {
                              tick_delta_time,

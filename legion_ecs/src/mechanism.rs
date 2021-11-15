@@ -16,6 +16,7 @@ where
 {
     fn clink(&mut self, state: &mut EngineState<S>, event: E) {
         state
+            .start_mutate()
             .get_mut(
                 |LegionState { world, resources }| match self.0.get_mut(&event) {
                     Some(schedule) => schedule.execute(world, resources),
