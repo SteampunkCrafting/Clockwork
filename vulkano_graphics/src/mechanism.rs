@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     state::{
-        init_vulkano, window_size_dependent_setup, GraphicsState, InternalMechanismState,
+        init_vulkano, window_size_dependent_setup, GraphicsState, GuiState, InternalMechanismState,
         OptionGraphicsState, StateRequirements,
     },
     vulkano_layer::VulkanoLayer,
@@ -15,7 +15,6 @@ use kernel::{
     prelude::StandardEvent,
     standard_runtime::{FromIntoStandardEvent, StandardMechanism},
 };
-use main_loop::prelude::OptionGui;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
     format::Format,
@@ -77,7 +76,7 @@ where
         state
             .start_mutate()
             .get_mut(|s: &mut OptionGraphicsState| **s = Some(graphics))
-            .then_get_mut(|(), s: &mut OptionGui| **s = Some(gui))
+            .then_get_mut(|(), s: &mut GuiState| s.initialize(move |_| gui))
             .finish()
     }
 
@@ -216,8 +215,8 @@ fn draw<S, E>(
             .unwrap();
 
         let mut cb = None;
-        CallbackSubstate::<OptionGui>::callback_substate_mut(state, |gui| {
-            cb = Some(gui.as_mut().unwrap().draw_on_subpass_image([width, height]));
+        CallbackSubstate::<GuiState>::callback_substate_mut(state, |gui| {
+            cb = Some(gui.get_init_mut().draw_on_subpass_image([width, height]));
         });
         builder.execute_commands(cb.unwrap()).unwrap();
 

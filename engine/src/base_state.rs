@@ -1,15 +1,13 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::state::OptionGraphicsState;
+use graphics::{prelude::Gui, state::OptionGraphicsState};
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
     prelude::StandardEvent,
+    util::init_state::InitState,
 };
-use main_loop::{
-    prelude::{IOState, OptionGui},
-    state::MainLoopState,
-};
+use main_loop::{prelude::IOState, state::MainLoopState};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 
@@ -86,7 +84,7 @@ where
         resources.insert(IOState::default());
 
         /* ---- INITIALIZING GUI ---- */
-        resources.insert(OptionGui::default());
+        resources.insert(InitState::<(), Gui>::default());
 
         /* ---- RETURNING ---- */
         Ok(base_state)
@@ -213,15 +211,18 @@ where
     }
 }
 
-impl<C> CallbackSubstate<OptionGui> for BaseState<C>
+impl<C> CallbackSubstate<InitState<(), Gui>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&OptionGui) -> R) -> R {
+    fn callback_substate<R>(&self, callback: impl FnOnce(&InitState<(), Gui>) -> R) -> R {
         callback(&self.ecs.resources.get().unwrap())
     }
 
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut OptionGui) -> R) -> R {
+    fn callback_substate_mut<R>(
+        &mut self,
+        callback: impl FnOnce(&mut InitState<(), Gui>) -> R,
+    ) -> R {
         callback(&mut self.ecs.resources.get_mut().unwrap())
     }
 }

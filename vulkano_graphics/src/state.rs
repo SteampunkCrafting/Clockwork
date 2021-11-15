@@ -1,13 +1,11 @@
 use egui_winit_vulkano::Gui;
+use kernel::util::init_state::InitState;
 use kernel::util::log::{debug, info, trace};
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState},
     standard_runtime::FromIntoStandardEvent,
 };
-use main_loop::{
-    prelude::{OptionGui, Window},
-    state::MainLoopState,
-};
+use main_loop::{prelude::Window, state::MainLoopState};
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -56,11 +54,13 @@ pub(crate) struct InternalMechanismState {
     pub framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
 }
 
+pub(crate) type GuiState = InitState<(), Gui>;
+
 pub trait StateRequirements<E>
 where
     Self: CallbackSubstate<MainLoopState<E>>
         + CallbackSubstate<OptionGraphicsState>
-        + CallbackSubstate<OptionGui>
+        + CallbackSubstate<GuiState>
         + ClockworkState,
     E: FromIntoStandardEvent,
 {
@@ -69,7 +69,7 @@ impl<T, E> StateRequirements<E> for T
 where
     T: CallbackSubstate<MainLoopState<E>>
         + CallbackSubstate<OptionGraphicsState>
-        + CallbackSubstate<OptionGui>
+        + CallbackSubstate<GuiState>
         + ClockworkState,
     E: FromIntoStandardEvent,
 {

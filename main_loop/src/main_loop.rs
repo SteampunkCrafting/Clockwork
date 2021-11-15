@@ -1,37 +1,21 @@
 use crate::state::{IOState, MainLoopState};
 use crate::state::{Input, Statistics};
 use egui_winit_vulkano::Gui;
-use kernel::abstract_runtime::{CallbackSubstate, ClockworkState, EngineState, Mechanisms};
+use kernel::abstract_runtime::{CallbackSubstate, EngineState, Mechanisms};
 use kernel::prelude::*;
 use kernel::standard_runtime::FromIntoStandardEvent;
-use std::{
-    ops::{Deref, DerefMut},
-    *,
-};
+use kernel::util::init_state::InitState;
+use std::*;
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
 };
 
-#[derive(Default)]
-pub struct OptionGui(Option<Gui>);
-impl ClockworkState for OptionGui {}
-impl Deref for OptionGui {
-    type Target = Option<Gui>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl DerefMut for OptionGui {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+type GuiState = InitState<(), Gui>;
 
 pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
-    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>> + CallbackSubstate<OptionGui>,
+    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>> + CallbackSubstate<GuiState>,
     E: FromIntoStandardEvent,
 {
     /* ---- INITIALIZATION ---- */
@@ -77,12 +61,7 @@ where
         /* ---- UPDATING GUI, IF EXISTS ---- */
         state
             .start_mutate()
-            .get_mut(|gui: &mut OptionGui| {
-                gui.deref_mut()
-                    .as_mut()
-                    .expect("Fatal: GUI has not been initialized")
-                    .update(&ev)
-            })
+            .get_mut(|gui: &mut GuiState| gui.get_init_mut().update(&ev))
             .finish();
 
         /* ---- HANDLING EVENT ---- */

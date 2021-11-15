@@ -1,6 +1,6 @@
-pub use core;
 pub use ecs;
 pub use graphics;
+pub use kernel;
 pub use main_loop;
 pub use physics;
 pub use scene;
