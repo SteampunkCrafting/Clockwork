@@ -1,7 +1,7 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::{prelude::Gui, state::OptionGraphicsState};
+use graphics::{prelude::Gui, state::GraphicsInitState};
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
     prelude::StandardEvent,
@@ -36,7 +36,7 @@ where
 
     assets: Assets<C>,
 
-    graphics_state: OptionGraphicsState,
+    graphics_state: GraphicsInitState,
 }
 
 impl<C> ClockworkState for BaseState<C> where C: AssetStorageKey {}
@@ -91,15 +91,15 @@ where
     }
 }
 
-impl<C> Substate<OptionGraphicsState> for BaseState<C>
+impl<C> Substate<GraphicsInitState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &OptionGraphicsState {
+    fn substate(&self) -> &GraphicsInitState {
         &self.graphics_state
     }
 
-    fn substate_mut(&mut self) -> &mut OptionGraphicsState {
+    fn substate_mut(&mut self) -> &mut GraphicsInitState {
         &mut self.graphics_state
     }
 }

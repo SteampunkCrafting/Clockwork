@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use crate::{
     state::{
-        init_vulkano, window_size_dependent_setup, GraphicsState, GuiState, InternalMechanismState,
-        OptionGraphicsState, StateRequirements,
+        init_vulkano, window_size_dependent_setup, GraphicsInitState, GraphicsState, GuiState,
+        InternalMechanismState, StateRequirements,
     },
     vulkano_layer::VulkanoLayer,
 };
@@ -75,7 +75,7 @@ where
         let _ = self.inner.insert(internal);
         state
             .start_mutate()
-            .get_mut(|s: &mut OptionGraphicsState| **s = Some(graphics))
+            .get_mut(|s: &mut GraphicsInitState| s.initialize(move |_| graphics))
             .then_get_mut(|(), s: &mut GuiState| s.initialize(move |_| gui))
             .finish()
     }
@@ -117,13 +117,13 @@ fn draw<S, E>(
 {
     let (mut target_image_size, render_pass, device, queue) = {
         let mut x = None;
-        CallbackSubstate::<OptionGraphicsState>::callback_substate(state, |gs| {
+        CallbackSubstate::<GraphicsInitState>::callback_substate(state, |gs| {
             let GraphicsState {
                 target_image_size,
                 render_pass,
                 device,
                 queue,
-            } = gs.as_ref().unwrap();
+            } = gs.get_init();
             x = Some((
                 target_image_size.clone(),
                 render_pass.clone(),
@@ -159,9 +159,9 @@ fn draw<S, E>(
         *recreate_swapchain = false;
 
         let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
-        CallbackSubstate::<OptionGraphicsState>::callback_substate_mut(state, |gs| {
+        CallbackSubstate::<GraphicsInitState>::callback_substate_mut(state, |gs| {
             target_image_size = [width, height];
-            gs.as_mut().unwrap().target_image_size = target_image_size;
+            gs.get_init_mut().target_image_size = target_image_size;
         });
     }
 

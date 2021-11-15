@@ -10,7 +10,7 @@ use self::{
 use asset_storage::{asset_storage::AssetStorageKey, prelude::AssetStorage};
 use graphics::{
     prelude::VulkanoLayer,
-    state::{GraphicsState, OptionGraphicsState},
+    state::{GraphicsInitState, GraphicsState},
     vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::GraphicsPipeline},
     vulkano_layer,
 };
@@ -95,7 +95,7 @@ where
             PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>,
         >,
     ) {
-        state.callback_substate(|graphics_state: &OptionGraphicsState| {
+        state.callback_substate(|graphics_state: &GraphicsInitState| {
             state.callback_substate(|LegionState { world, .. }| {
                 state.callback_substate(|meshes: &ColoredMeshStorage<I>| {
                     state.callback_substate(|physics: &PhysicsState| {
@@ -104,7 +104,7 @@ where
                                 render_pass,
                                 device,
                                 ..
-                            } = graphics_state.as_ref().unwrap();
+                            } = graphics_state.get_init();
                             match (self, CameraEntity::query().iter(world).next()) {
                                 (Self(inner_state @ None, ..), _) => {
                                     // INITIALIZATION

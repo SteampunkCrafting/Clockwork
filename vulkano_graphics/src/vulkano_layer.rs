@@ -1,11 +1,12 @@
-use crate::state::OptionGraphicsState;
 use kernel::abstract_runtime::CallbackSubstate;
 use vulkano::command_buffer::{
     pool::standard::StandardCommandPoolAlloc, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };
 
-pub trait StateRequirements: CallbackSubstate<OptionGraphicsState> {}
-impl<T> StateRequirements for T where T: CallbackSubstate<OptionGraphicsState> {}
+use crate::state::GraphicsInitState;
+
+pub trait StateRequirements: CallbackSubstate<GraphicsInitState> {}
+impl<T> StateRequirements for T where T: CallbackSubstate<GraphicsInitState> {}
 
 pub trait VulkanoLayer<S>
 where
