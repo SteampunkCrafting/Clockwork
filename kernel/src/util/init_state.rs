@@ -1,3 +1,5 @@
+use crate::abstract_runtime::{ClockworkState, ClockworkStateRequirements};
+
 /// Initializable state
 ///
 /// Represents an object, which has three main stages:
@@ -127,4 +129,11 @@ where
     fn default() -> Self {
         InitState::Uninit(Default::default())
     }
+}
+
+impl<U, T> ClockworkState for InitState<U, T>
+where
+    U: ClockworkStateRequirements,
+    T: ClockworkStateRequirements,
+{
 }
