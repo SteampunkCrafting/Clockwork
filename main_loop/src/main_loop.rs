@@ -35,10 +35,13 @@ where
 
     let mut last_tick_start_at = time::Instant::now();
     let mut last_draw_start_at = time::Instant::now();
+    let mut est_tick_period = Default::default();
+    let mut est_draw_period = Default::default();
     let mut tick_debt = 0f32;
-    let mut draw_debt = false;
+    let mut draw_debt = 0f32;
     let mut ticks_total = 0;
     let mut frames_total = 0;
+
     event_loop.run(move |ev, _, cf| {
         trace!("Handling next event: {:?}", ev);
         let current_time = time::Instant::now();
@@ -105,8 +108,6 @@ where
                         },
                     )
                     .finish();
-                let mut est_tick_period = Default::default();
-                let mut est_draw_period = Default::default();
 
                 match (
                     current_time - last_tick_start_at,
@@ -121,21 +122,20 @@ where
                             .send_event(StandardEvent::Tick.into())
                             .map_or((), |_| ())
                     }
-                    (_, draw_delta) if draw_debt => {
+                    (_, draw_delta) if draw_debt >= 1f32 => {
                         est_draw_period = draw_delta;
                         frames_total += 1;
-                        draw_debt = false;
+                        draw_debt = 0f32;
                         last_draw_start_at = time::Instant::now();
                         event_proxy
                             .send_event(StandardEvent::Draw.into())
-                            .map_or((), |_| ());
+                            .map_or((), |_| ())
                     }
                     (tick_delta, draw_delta) => {
-                        tick_debt = tick_delta.as_secs_f32() / desired_tick_period.as_secs_f32();
-                        draw_debt = draw_delta.as_secs_f32()
-                            / desired_min_draw_period.as_secs_f32()
-                            >= 1f32;
-                        *cf = if tick_debt >= 1f32 || draw_debt {
+                        tick_debt += tick_delta.as_secs_f32() / desired_tick_period.as_secs_f32();
+                        draw_debt +=
+                            draw_delta.as_secs_f32() / desired_min_draw_period.as_secs_f32();
+                        *cf = if tick_debt >= 1f32 || draw_debt >= 1f32 {
                             ControlFlow::Poll
                         } else {
                             ControlFlow::WaitUntil(cmp::min(
@@ -145,6 +145,7 @@ where
                         }
                     }
                 }
+
                 state
                     .start_mutate()
                     .get_mut(
