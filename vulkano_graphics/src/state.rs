@@ -42,42 +42,66 @@ pub(crate) struct InternalMechanismState {
 
 pub struct GuiState {
     inner: InitState<
-        Box<dyn Fn(egui::CtxRef) + Send>,
-        (Box<dyn Fn(egui::CtxRef) + Send>, WriteLock<Gui>),
+        Option<Box<dyn FnMut(egui::CtxRef) + Send>>,
+        (Option<Box<dyn FnMut(egui::CtxRef) + Send>>, WriteLock<Gui>),
     >,
 }
 
 impl ClockworkState for GuiState {}
 
 impl GuiState {
-    pub fn update_ui(&mut self, callback: impl Fn(egui::CtxRef) + Send + 'static) {
+    /// Updates UI synchronously.
+    ///
+    /// In order for this method to work, one must call it with the draw call
+    /// before the `VulkanoGraphics` starts drawing (or at least with the same
+    /// frequency as the draw calls). If this is not an option, consider using
+    /// `GuiState::async_ui`.
+    ///
+    /// **Failing to accomplish the same draw frequency may lead to UI image flickering**
+    ///
+    /// # Panics
+    /// Panics when the method is called before the state initialization happens.
+    pub fn immediate_ui(&mut self, callback: impl FnOnce(egui::CtxRef)) {
+        let (draw_fn, gui) = self.inner.get_init_mut();
+        *draw_fn = None;
+        gui.lock_mut().immediate_ui(|gui| callback(gui.context()))
+    }
+
+    /// Updates UI asynchronously.
+    ///
+    /// This method always works, but the callback requires `Send` and `'static`,
+    /// which will require additional synchronization logic in order to perform reading from state.
+    /// If this is not an option, consider using `GuiState::immediate_ui`.
+    pub fn async_ui(&mut self, callback: impl FnMut(egui::CtxRef) + Send + 'static) {
         *match &mut self.inner {
             InitState::Uninit(x) => x,
             InitState::Init((x, _)) => x,
             _ => panic!("Gui state is terminated -- cannot update UI"),
-        } = Box::from(callback)
+        } = Some(Box::from(callback))
     }
 
+    /// State initialization
     pub(crate) fn initialize(&mut self, gui: WriteLock<Gui>) {
         self.inner.initialize(|draw_fn| (draw_fn, gui))
     }
 
+    /// Draw call
     pub(crate) fn init_draw_on_subpass_image(
         &mut self,
         image_dimensions: [u32; 2],
     ) -> SecondaryAutoCommandBuffer {
         let (draw_fn, gui) = self.inner.get_init_mut();
         let mut gui = gui.lock_mut();
-        gui.immediate_ui(|gui| draw_fn(gui.context()));
+        draw_fn
+            .as_mut()
+            .map_or((), |draw_fn| gui.immediate_ui(|gui| draw_fn(gui.context())));
         gui.draw_on_subpass_image(image_dimensions)
     }
 }
 
 impl Default for GuiState {
     fn default() -> Self {
-        Self {
-            inner: InitState::from(Box::from(|_| ()) as Box<dyn Fn(egui::CtxRef) + Send>),
-        }
+        Self { inner: None.into() }
     }
 }
 
