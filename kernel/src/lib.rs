@@ -35,10 +35,12 @@ pub mod standard_runtime {
     /* ---- PRIVATE ---- */
     mod event;
     mod mechanism;
+    mod statistics;
 
     /* ---- PUBLIC ---- */
     pub use event::*;
     pub use mechanism::*;
+    pub use statistics::*;
 }
 
 /// Utilities
