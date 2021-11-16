@@ -1,30 +1,56 @@
+use std::marker::PhantomData;
+
+use crate::state::PhysicsState;
 use kernel::{
     abstract_runtime::{CallbackSubstate, EngineState},
     prelude::StandardEvent,
-    standard_runtime::StandardMechanism,
+    standard_runtime::{StandardMechanism, StandardRuntimeStatistics},
+    util::derive_builder::Builder,
 };
-use main_loop::state::IOState;
 use rapier3d::{dynamics::IntegrationParameters, pipeline::PhysicsPipeline};
 
-use crate::state::PhysicsState;
-
-#[derive(Default)]
-pub struct Rapier3DTicker(PhysicsPipeline, IntegrationParameters);
-
-impl<S> StandardMechanism<S> for Rapier3DTicker
+#[derive(Builder)]
+#[builder(pattern = "owned")]
+pub struct Rapier3DTicker<T>
 where
-    S: CallbackSubstate<PhysicsState> + CallbackSubstate<IOState>,
+    T: StandardRuntimeStatistics,
+{
+    /// A physics pipeline of the ticker
+    #[builder(private, default)]
+    physics_pipeline: PhysicsPipeline,
+
+    /// Integration parameters of the ticker
+    #[builder(private, default)]
+    integration_parameters: IntegrationParameters,
+
+    /// Phantom data for statistics type
+    #[builder(private, default)]
+    phantom_data: PhantomData<T>,
+}
+
+impl<T> Rapier3DTicker<T>
+where
+    T: StandardRuntimeStatistics,
+{
+    pub fn builder() -> Rapier3DTickerBuilder<T> {
+        Default::default()
+    }
+}
+
+impl<S, T> StandardMechanism<S> for Rapier3DTicker<T>
+where
+    S: CallbackSubstate<PhysicsState> + CallbackSubstate<T>,
+    T: StandardRuntimeStatistics,
 {
     fn tick(&mut self, state: &mut EngineState<S>) {
-        let Rapier3DTicker(pipeline, integration_parameters) = self;
+        let Rapier3DTicker {
+            physics_pipeline,
+            integration_parameters,
+            ..
+        } = self;
         state
             .start_mutate()
-            .get_mut(
-                |IOState {
-                     ref tick_delta_time,
-                     ..
-                 }| *tick_delta_time,
-            )
+            .get(T::current_tick_delta)
             .then_get_mut(
                 |delta_time,
                  PhysicsState {
@@ -38,7 +64,7 @@ where
                      islands,
                  }| {
                     integration_parameters.dt = delta_time.as_secs_f32();
-                    pipeline.step(
+                    physics_pipeline.step(
                         &gravity.0,
                         integration_parameters,
                         islands,
@@ -50,7 +76,7 @@ where
                         ccd_solver,
                         &mut (),
                         &mut (),
-                    );
+                    )
                 },
             )
             .finish()

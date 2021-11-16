@@ -13,7 +13,7 @@ use kernel::{
     prelude::StandardEvent,
     standard_runtime::{FromIntoStandardEvent, StandardMechanism},
 };
-use main_loop::state::MainLoopState;
+use main_loop::state::WinitLoopState;
 use std::marker::PhantomData;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
@@ -78,7 +78,7 @@ where
             .start_mutate()
             .get_mut(|s: &mut GraphicsInitState| s.initialize(move |_| graphics))
             .get_mut(|s: &mut GuiState| s.initialize(gui.clone()))
-            .get_mut(|s: &mut MainLoopState<E>| {
+            .get_mut(|s: &mut WinitLoopState<E>| {
                 s.add_event_callback(move |ev| gui.lock_mut().update(ev))
             })
             .finish()

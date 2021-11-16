@@ -6,7 +6,7 @@ use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
     prelude::StandardEvent,
 };
-use main_loop::{prelude::IOState, state::MainLoopState};
+use main_loop::state::{InputState, MainLoopStatistics, WinitLoopState};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 
@@ -31,7 +31,7 @@ where
     ecs: LegionState,
 
     #[builder(setter(skip))]
-    main_loop_state: MainLoopState<StandardEvent>,
+    main_loop_state: WinitLoopState<StandardEvent>,
 
     assets: Assets<C>,
 
@@ -68,7 +68,7 @@ where
         let mut base_state = BaseState {
             ecs: LegionState::builder().build().unwrap(),
             assets: assets.ok_or("Missing assets")?,
-            main_loop_state: Default::default(),
+            main_loop_state: WinitLoopState::builder().build().unwrap(),
             graphics_state: Default::default(),
         };
         let BaseState {
@@ -77,16 +77,62 @@ where
         } = &mut base_state;
 
         /* ---- INITIALIZING PHYSICS ---- */
-        resources.insert(PhysicsState::default());
+        resources.insert(PhysicsState::builder().build().unwrap());
 
         /* ---- INITIALIZING IO ---- */
-        resources.insert(IOState::default());
+        resources.insert(InputState::builder().build().unwrap());
+        resources.insert(MainLoopStatistics::builder().build().unwrap());
 
         /* ---- INITIALIZING GUI ---- */
         resources.insert(GuiState::default());
 
         /* ---- RETURNING ---- */
         Ok(base_state)
+    }
+}
+
+impl<C> CallbackSubstate<MainLoopStatistics> for BaseState<C>
+where
+    C: AssetStorageKey,
+{
+    fn callback_substate<R>(&self, callback: impl FnOnce(&MainLoopStatistics) -> R) -> R {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&resources.get().unwrap())
+    }
+
+    fn callback_substate_mut<R>(
+        &mut self,
+        callback: impl FnOnce(&mut MainLoopStatistics) -> R,
+    ) -> R {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&mut resources.get_mut().unwrap())
+    }
+}
+
+impl<C> CallbackSubstate<InputState> for BaseState<C>
+where
+    C: AssetStorageKey,
+{
+    fn callback_substate<R>(&self, callback: impl FnOnce(&InputState) -> R) -> R {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&resources.get().unwrap())
+    }
+
+    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut InputState) -> R) -> R {
+        let Self {
+            ecs: LegionState { resources, .. },
+            ..
+        } = self;
+        callback(&mut resources.get_mut().unwrap())
     }
 }
 
@@ -116,27 +162,6 @@ where
     }
 
     fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut PhysicsState) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&mut resources.get_mut().unwrap())
-    }
-}
-
-impl<C> CallbackSubstate<IOState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn callback_substate<R>(&self, callback: impl FnOnce(&IOState) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = &self;
-        callback(&resources.get().unwrap())
-    }
-
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut IOState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -184,15 +209,15 @@ where
     }
 }
 
-impl<C> Substate<MainLoopState<StandardEvent>> for BaseState<C>
+impl<C> Substate<WinitLoopState<StandardEvent>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &MainLoopState<StandardEvent> {
+    fn substate(&self) -> &WinitLoopState<StandardEvent> {
         &self.main_loop_state
     }
 
-    fn substate_mut(&mut self) -> &mut MainLoopState<StandardEvent> {
+    fn substate_mut(&mut self) -> &mut WinitLoopState<StandardEvent> {
         &mut self.main_loop_state
     }
 }

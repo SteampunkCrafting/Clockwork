@@ -8,11 +8,8 @@ edition = "2018"
 
 [dependencies]
 rapier3d = { version = "*", features = ["simd-stable"] }
+derive_builder = "0.10.2"
 
 [dependencies.kernel]
 package = "spc_clockwork_kernel"
 path = "../kernel"
-
-[dependencies.main_loop]
-package = "spc_clockwork_main_loop"
-path = "../main_loop"

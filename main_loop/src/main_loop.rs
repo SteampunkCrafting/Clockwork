@@ -1,5 +1,5 @@
-use crate::state::{IOState, MainLoopState};
-use crate::state::{Input, Statistics};
+use crate::state::WinitLoopState;
+use crate::state::{InputState, MainLoopStatistics};
 use kernel::abstract_runtime::{CallbackSubstate, EngineState, Mechanisms};
 use kernel::prelude::*;
 use kernel::standard_runtime::FromIntoStandardEvent;
@@ -11,7 +11,9 @@ use winit::{
 
 pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
-    S: CallbackSubstate<IOState> + CallbackSubstate<MainLoopState<E>>,
+    S: CallbackSubstate<MainLoopStatistics>
+        + CallbackSubstate<WinitLoopState<E>>
+        + CallbackSubstate<InputState>,
     E: FromIntoStandardEvent,
 {
     /* -- INITIALIZING MECHANISMS -- */
@@ -24,7 +26,7 @@ where
     info!("Retrieving event loop object from the engine state");
     let (event_loop, event_proxy) = state
         .start_mutate()
-        .get_mut(|s: &mut MainLoopState<E>| s.initialize())
+        .get_mut(|s: &mut WinitLoopState<E>| s.initialize())
         .finish();
     info!("Done retrieving event loop object from the engine state");
 
@@ -44,7 +46,7 @@ where
         /* ---- NOTIFYING SUBSCRIBERS ABOUT THE EVENT ---- */
         state
             .start_mutate()
-            .get_mut(|ml: &mut MainLoopState<E>| ml.notify(&ev))
+            .get_mut(|ml: &mut WinitLoopState<E>| ml.notify(&ev))
             .finish();
 
         /* ---- HANDLING EVENT ---- */
@@ -84,34 +86,22 @@ where
             } => {
                 state
                     .start_mutate()
-                    .get_mut(
-                        |IOState {
-                             input:
-                                 Input {
-                                     pressed_keys: pk, ..
-                                 },
-                             ..
-                         }| match keyboard_state {
-                            winit::event::ElementState::Pressed => {
-                                pk.insert(vkk);
-                            }
-                            winit::event::ElementState::Released => {
-                                pk.remove(&vkk);
-                            }
-                        },
-                    )
+                    .get_mut(|InputState { pressed_keys, .. }| match keyboard_state {
+                        winit::event::ElementState::Pressed => pressed_keys.insert(vkk),
+                        winit::event::ElementState::Released => pressed_keys.remove(&vkk),
+                    })
                     .finish();
             }
             WinitEvent::MainEventsCleared => {
                 let (desired_tick_period, desired_min_draw_period) = state
                     .start_mutate()
-                    .get_mut(
-                        |IOState {
-                             desired_tick_period,
+                    .get(
+                        |MainLoopStatistics {
+                             desired_avg_tick_period,
                              desired_min_draw_period,
                              ..
                          }| {
-                            (desired_tick_period.clone(), desired_min_draw_period.clone())
+                            (*desired_avg_tick_period, *desired_min_draw_period)
                         },
                     )
                     .finish();
@@ -158,26 +148,17 @@ where
                 state
                     .start_mutate()
                     .get_mut(
-                        |IOState {
-                             tick_delta_time,
-                             draw_delta_time,
-                             statistics:
-                                 Statistics {
-                                     ticks_total: state_ticks_total,
-                                     frames_total: state_frames_total,
-                                     tick_period: state_tick_period,
-                                     draw_period: state_draw_period,
-                                     ..
-                                 },
+                        |MainLoopStatistics {
+                             current_tick_delta: state_tick_period,
+                             current_draw_delta: state_draw_period,
+                             ticks_total: state_ticks_total,
+                             frames_total: state_frames_total,
                              ..
                          }| {
                             *state_ticks_total = ticks_total;
                             *state_frames_total = frames_total;
                             *state_tick_period = est_tick_period;
                             *state_draw_period = est_draw_period;
-
-                            *tick_delta_time = est_tick_period;
-                            *draw_delta_time = est_draw_period;
                         },
                     )
                     .finish()
