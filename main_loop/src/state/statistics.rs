@@ -5,10 +5,6 @@ use kernel::{
 };
 use std::time;
 
-fn x() {
-    time::Duration::from_secs_f32(1f32 / 60f32);
-}
-
 /// Main loop statistics
 #[derive(Clone, Copy, Debug, Builder, Setters)]
 #[builder(pattern = "owned", setter(into, skip))]
