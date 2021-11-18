@@ -6,7 +6,7 @@ use crate::{
     vulkano_layer::VulkanoLayer,
 };
 use kernel::{
-    abstract_runtime::{CallbackSubstate, ClockworkState, EngineState},
+    abstract_runtime::{ClockworkState, EngineState},
     util::{derive_builder::Builder, sync::WriteLock},
 };
 use kernel::{
@@ -86,10 +86,7 @@ where
 
     fn draw(&mut self, state: &mut EngineState<S>) {
         let (layers, inner) = (&mut self.layers, self.inner.as_mut().unwrap());
-        state
-            .start_mutate()
-            .get_mut(|s| draw(s, layers, inner))
-            .finish();
+        draw(state, layers, inner)
     }
 
     fn handled_events(&self) -> Option<Vec<StandardEvent>> {
@@ -107,7 +104,7 @@ where
 
 /// Draws on the window by means of activating VulkanoLayers
 fn draw<S, E>(
-    state: &mut S,
+    state: &mut EngineState<S>,
     layers: &mut Vec<Box<dyn VulkanoLayer<S>>>,
     InternalMechanismState {
         swapchain,
@@ -119,24 +116,15 @@ fn draw<S, E>(
     S: StateRequirements<E>,
     E: FromIntoStandardEvent,
 {
-    let (mut target_image_size, render_pass, device, queue) = {
-        let mut x = None;
-        CallbackSubstate::<GraphicsInitState>::callback_substate(state, |gs| {
-            let GraphicsState {
-                target_image_size,
-                render_pass,
-                device,
-                queue,
-            } = gs.get_init();
-            x = Some((
-                target_image_size.clone(),
-                render_pass.clone(),
-                device.clone(),
-                queue.clone(),
-            ));
-        });
-        x.unwrap()
-    };
+    let GraphicsState {
+        target_image_size,
+        render_pass,
+        device,
+        queue,
+    } = state
+        .start_access()
+        .get(|gs: &GraphicsInitState| gs.get_init().clone())
+        .finish();
 
     /* ---- GARBAGE COLLECTING ---- */
     previous_frame_end.as_mut().unwrap().cleanup_finished();
@@ -152,7 +140,7 @@ fn draw<S, E>(
             Err(e) => panic!("Failed to recreate swapchain: {:?}", e),
         };
         let depth_image =
-            AttachmentImage::transient(device.clone(), dimensions, Format::D32_SFLOAT).unwrap();
+            AttachmentImage::transient(device.clone(), dimensions, Format::D16_UNORM).unwrap();
         let new_images = new_images
             .into_iter()
             .map(|image| (image, depth_image.clone()))
@@ -162,10 +150,9 @@ fn draw<S, E>(
         *framebuffers = window_size_dependent_setup(&new_images, render_pass.clone());
         *recreate_swapchain = false;
 
-        let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
-        CallbackSubstate::<GraphicsInitState>::callback_substate_mut(state, |gs| {
-            target_image_size = [width, height];
-            gs.get_init_mut().target_image_size = target_image_size;
+        state.start_mutate().get_mut(|gs: &mut GraphicsInitState| {
+            let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
+            gs.get_init_mut().target_image_size = [width, height];
         });
     }
 
@@ -210,19 +197,24 @@ fn draw<S, E>(
             )
             .unwrap();
 
-        for layer in layers {
-            layer.draw(state, &mut builder);
-        }
+        state.start_access().get(|state: &S| {
+            layers
+                .iter_mut()
+                .for_each(|layer| layer.draw(state, &mut builder));
+        });
 
         builder
             .next_subpass(SubpassContents::SecondaryCommandBuffers)
             .unwrap();
 
-        let mut cb = None;
-        CallbackSubstate::<GuiState>::callback_substate_mut(state, |gui| {
-            cb = Some(gui.init_draw_on_subpass_image([width, height]));
-        });
-        builder.execute_commands(cb.unwrap()).unwrap();
+        builder
+            .execute_commands(
+                state
+                    .start_mutate()
+                    .get_mut(|gui: &mut GuiState| gui.init_draw_on_subpass_image([width, height]))
+                    .finish(),
+            )
+            .unwrap();
 
         builder.end_render_pass().unwrap();
         builder
