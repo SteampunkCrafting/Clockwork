@@ -6,7 +6,7 @@ use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
     prelude::StandardEvent,
 };
-use main_loop::state::{InputState, MainLoopStatistics, WinitLoopState};
+use main_loop::state::{InitWinitState, InputState, MainLoopStatistics};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 
@@ -31,7 +31,7 @@ where
     ecs: LegionState,
 
     #[builder(setter(skip))]
-    main_loop_state: WinitLoopState<StandardEvent>,
+    main_loop_state: InitWinitState<StandardEvent>,
 
     assets: Assets<C>,
 
@@ -68,13 +68,17 @@ where
         let mut base_state = BaseState {
             ecs: LegionState::builder().build().unwrap(),
             assets: assets.ok_or("Missing assets")?,
-            main_loop_state: WinitLoopState::builder().build().unwrap(),
+            main_loop_state: InitWinitState::builder().build().unwrap(),
             graphics_state: Default::default(),
         };
         let BaseState {
             ecs: LegionState { resources, .. },
+            main_loop_state,
             ..
         } = &mut base_state;
+
+        /* ---- INITIALIZING MAIN LOOP ---- */
+        resources.insert(main_loop_state.proxy().clone());
 
         /* ---- INITIALIZING PHYSICS ---- */
         resources.insert(PhysicsState::builder().build().unwrap());
@@ -209,15 +213,15 @@ where
     }
 }
 
-impl<C> Substate<WinitLoopState<StandardEvent>> for BaseState<C>
+impl<C> Substate<InitWinitState<StandardEvent>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn substate(&self) -> &WinitLoopState<StandardEvent> {
+    fn substate(&self) -> &InitWinitState<StandardEvent> {
         &self.main_loop_state
     }
 
-    fn substate_mut(&mut self) -> &mut WinitLoopState<StandardEvent> {
+    fn substate_mut(&mut self) -> &mut InitWinitState<StandardEvent> {
         &mut self.main_loop_state
     }
 }

@@ -8,7 +8,7 @@ use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState},
     standard_runtime::FromIntoStandardEvent,
 };
-use main_loop::{prelude::Window, state::WinitLoopState};
+use main_loop::{prelude::Window, state::InitWinitState};
 use vulkano::command_buffer::SecondaryAutoCommandBuffer;
 use vulkano::{
     device::{physical::PhysicalDevice, Device, DeviceExtensions, Queue},
@@ -107,7 +107,7 @@ impl Default for GuiState {
 
 pub trait StateRequirements<E>
 where
-    Self: CallbackSubstate<WinitLoopState<E>>
+    Self: CallbackSubstate<InitWinitState<E>>
         + CallbackSubstate<GraphicsInitState>
         + CallbackSubstate<GuiState>
         + ClockworkState,
@@ -116,7 +116,7 @@ where
 }
 impl<T, E> StateRequirements<E> for T
 where
-    T: CallbackSubstate<WinitLoopState<E>>
+    T: CallbackSubstate<InitWinitState<E>>
         + CallbackSubstate<GraphicsInitState>
         + CallbackSubstate<GuiState>
         + ClockworkState,
@@ -140,7 +140,7 @@ where
 
     let surface = {
         let mut surface = None;
-        CallbackSubstate::callback_substate(engine_state, |ml: &WinitLoopState<E>| {
+        CallbackSubstate::callback_substate(engine_state, |ml: &InitWinitState<E>| {
             trace!("Instantiating window and surface");
             surface = Some(
                 WindowBuilder::new()

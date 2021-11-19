@@ -1,4 +1,4 @@
-use crate::state::WinitLoopState;
+use crate::state::InitWinitState;
 use crate::state::{InputState, MainLoopStatistics};
 use kernel::abstract_runtime::{CallbackSubstate, EngineState, Mechanisms};
 use kernel::prelude::*;
@@ -12,7 +12,7 @@ use winit::{
 pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
     S: CallbackSubstate<MainLoopStatistics>
-        + CallbackSubstate<WinitLoopState<E>>
+        + CallbackSubstate<InitWinitState<E>>
         + CallbackSubstate<InputState>,
     E: FromIntoStandardEvent,
 {
@@ -26,7 +26,7 @@ where
     info!("Retrieving event loop object from the engine state");
     let (event_loop, event_proxy) = state
         .start_mutate()
-        .get_mut(|s: &mut WinitLoopState<E>| s.initialize())
+        .get_mut(|s: &mut InitWinitState<E>| s.initialize())
         .finish();
     info!("Done retrieving event loop object from the engine state");
 
@@ -49,31 +49,25 @@ where
         /* ---- NOTIFYING SUBSCRIBERS ABOUT THE EVENT ---- */
         state
             .start_mutate()
-            .get_mut(|ml: &mut WinitLoopState<E>| ml.notify(&ev))
+            .get_mut(|ml: &mut InitWinitState<E>| ml.notify(&ev))
             .finish();
 
         /* ---- HANDLING EVENT ---- */
         match ev {
-            WinitEvent::UserEvent(ref ev) if ev.clone().into() == StandardEvent::Tick => {
-                debug!("Performing tick");
-                mechanisms.clink_event(&mut state, StandardEvent::Tick.into());
-                debug!("Finished tick");
+            WinitEvent::UserEvent(ref e) if e.clone().into() == StandardEvent::Termination => {
+                debug!("Requested main loop termination");
+                debug!("Terminating mechanisms");
+                mechanisms.clink_event(&mut state, e.clone());
+                debug!("Terminating main loop");
+                *cf = ControlFlow::Exit;
+                debug!("Finished main loop termination");
             }
-            WinitEvent::UserEvent(ref ev) if ev.clone().into() == StandardEvent::Draw => {
-                debug!("Performing draw call");
-                mechanisms.clink_event(&mut state, StandardEvent::Draw.into());
-                debug!("Finished draw call");
+            WinitEvent::UserEvent(ref e) => {
+                let standard_event = e.clone().into();
+                debug!("Handling standard event: {:?}", &standard_event);
+                mechanisms.clink_event(&mut state, e.clone());
+                debug!("Finished handling standard event: {:?}", &standard_event);
             }
-            WinitEvent::LoopDestroyed => {
-                info!("Terminating main loop");
-                info!("Terminating mechanisms");
-                mechanisms.clink_event(&mut state, StandardEvent::Termination.into());
-                info!("Finished terminating mechanisms");
-            }
-            WinitEvent::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                ..
-            } => *cf = ControlFlow::Exit,
             WinitEvent::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {

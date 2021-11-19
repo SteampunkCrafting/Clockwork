@@ -14,6 +14,6 @@ pub mod state {
 pub mod prelude {
     pub use crate::main_loop::*;
     pub use crate::state::*;
-    pub use winit::event::VirtualKeyCode;
+    pub use winit::event::{Event, VirtualKeyCode, WindowEvent};
     pub use winit::window::Window;
 }
