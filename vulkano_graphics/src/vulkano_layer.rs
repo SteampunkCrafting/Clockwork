@@ -42,7 +42,12 @@ pub trait NewVulkanoLayer<S>
 where
     S: StateRequirements,
 {
-    fn initialization(&mut self, engine_state: &EngineState<S>, window_dimensions: [u32; 2]);
+    fn initialization(
+        &mut self,
+        engine_state: &EngineState<S>,
+        graphics_state: &GraphicsState,
+        window_dimensions: [u32; 2],
+    );
 
     fn window_resize(
         &mut self,
