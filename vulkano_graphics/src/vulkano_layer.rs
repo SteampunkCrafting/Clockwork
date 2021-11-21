@@ -9,7 +9,8 @@ use crate::state::{GraphicsInitState, GraphicsState};
 pub trait StateRequirements: CallbackSubstate<GraphicsInitState> {}
 impl<T> StateRequirements for T where T: CallbackSubstate<GraphicsInitState> {}
 
-pub trait VulkanoLayer<S>
+#[deprecated]
+pub trait OldVulkanoLayer<S>
 where
     S: StateRequirements,
 {
@@ -22,7 +23,7 @@ where
     );
 }
 
-impl<T, S> VulkanoLayer<S> for T
+impl<T, S> OldVulkanoLayer<S> for T
 where
     T: FnMut(&S, &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>>),
     S: StateRequirements,
@@ -38,7 +39,7 @@ where
     }
 }
 
-pub trait NewVulkanoLayer<S>
+pub trait VulkanoLayer<S>
 where
     S: StateRequirements,
 {

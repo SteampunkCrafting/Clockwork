@@ -8,11 +8,11 @@ use self::{
     vertex::Vertex,
 };
 use asset_storage::{asset_storage::AssetStorageKey, prelude::AssetStorage};
+use graphics::prelude::OldVulkanoLayer;
+use graphics::vulkano_layer;
 use graphics::{
-    prelude::VulkanoLayer,
     state::{GraphicsInitState, GraphicsState},
     vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::GraphicsPipeline},
-    vulkano_layer,
 };
 use kernel::abstract_runtime::CallbackSubstate;
 use legion_ecs::{prelude::*, state::LegionState};
@@ -83,7 +83,7 @@ pub struct ColoredMeshDrawer<I>(
 where
     I: AssetStorageKey;
 
-impl<S, I> VulkanoLayer<S> for ColoredMeshDrawer<I>
+impl<S, I> OldVulkanoLayer<S> for ColoredMeshDrawer<I>
 where
     S: StateRequirements<I>,
     I: AssetStorageKey,

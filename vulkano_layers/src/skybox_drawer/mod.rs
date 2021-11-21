@@ -1,6 +1,6 @@
 use self::inner_state::InnerState;
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::{state::GraphicsInitState, vulkano_layer::VulkanoLayer};
+use graphics::{state::GraphicsInitState, vulkano_layer::OldVulkanoLayer};
 use legion_ecs::{
     prelude::{component, IntoQuery},
     state::LegionState,
@@ -28,7 +28,7 @@ where
 
 pub struct DrawMarker;
 
-impl<S, I> VulkanoLayer<S> for SkyboxDrawer<I>
+impl<S, I> OldVulkanoLayer<S> for SkyboxDrawer<I>
 where
     S: StateRequirements<I>,
     I: AssetStorageKey,

@@ -1,3 +1,4 @@
+use crate::vulkano_layer::OldVulkanoLayer;
 use crate::{
     state::{
         init_vulkano, window_size_dependent_setup, GraphicsInitState, GraphicsState, GuiState,
@@ -35,7 +36,10 @@ where
     #[builder(setter(skip))]
     inner: Option<InternalMechanismState>,
 
-    #[builder(private, setter(name = "__layers", into = "false"))]
+    #[builder(private, setter(name = "__old_layers", into = "false"), default)]
+    old_layers: Vec<Box<dyn OldVulkanoLayer<S>>>,
+
+    #[builder(private, setter(name = "__layers", into = "false"), default)]
     layers: Vec<Box<dyn VulkanoLayer<S>>>,
 
     #[builder(setter(skip))]
@@ -57,10 +61,18 @@ where
     S: StateRequirements<E>,
     E: StandardEventSuperset,
 {
-    pub fn add_layer(mut self, layer: impl VulkanoLayer<S> + 'static) -> Self {
+    #[deprecated]
+    pub fn add_old_layer(mut self, old_layer: impl OldVulkanoLayer<S> + 'static) -> Self {
+        self.old_layers
+            .get_or_insert(Default::default())
+            .push(Box::new(old_layer));
+        self
+    }
+
+    pub fn add_layer(mut self, old_layer: impl VulkanoLayer<S> + 'static) -> Self {
         self.layers
             .get_or_insert(Default::default())
-            .push(Box::new(layer));
+            .push(Box::new(old_layer));
         self
     }
 }
@@ -85,7 +97,7 @@ where
     }
 
     fn draw(&mut self, state: &mut EngineState<S>) {
-        let (layers, inner) = (&mut self.layers, self.inner.as_mut().unwrap());
+        let (layers, inner) = (&mut self.old_layers, self.inner.as_mut().unwrap());
         draw(state, layers, inner)
     }
 
@@ -105,7 +117,7 @@ where
 /// Draws on the window by means of activating VulkanoLayers
 fn draw<S, E>(
     state: &mut EngineState<S>,
-    layers: &mut Vec<Box<dyn VulkanoLayer<S>>>,
+    layers: &mut Vec<Box<dyn OldVulkanoLayer<S>>>,
     InternalMechanismState {
         swapchain,
         previous_frame_end,
