@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use crate::abstract_runtime::ClockworkEvent;
 
 /// A base event of the Clockwork.
@@ -30,16 +32,18 @@ pub enum StandardEvent {
 }
 
 /// A trait, which is automatically implemented for every custom ClockworkEvent,
-/// convertible from and into the BaseEvent.
+/// some of which events have a one-to-one correspondence.
 ///
-/// Many mechanisms, as well as the default main loop, provided in the main repository
-/// requires this trait to be implemented on the event type.
-pub trait FromIntoStandardEvent
+/// This type instance can be created from the `StandardEvent` -- its subset,
+/// and may possibly map to the corresponding instance of `StandardEvent`.
+///
+/// Because this is a superset relation, `TryInto::Error` is an empty tuple.
+pub trait StandardEventSuperset
 where
-    Self: ClockworkEvent + Into<StandardEvent> + From<StandardEvent>,
+    Self: ClockworkEvent + TryInto<StandardEvent, Error = ()> + From<StandardEvent>,
 {
 }
-impl<E> FromIntoStandardEvent for E where
-    E: ClockworkEvent + Into<StandardEvent> + From<StandardEvent>
+impl<E> StandardEventSuperset for E where
+    E: ClockworkEvent + TryInto<StandardEvent, Error = ()> + From<StandardEvent>
 {
 }

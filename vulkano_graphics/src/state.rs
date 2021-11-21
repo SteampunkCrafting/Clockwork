@@ -6,7 +6,7 @@ use kernel::util::log::{debug, info, trace};
 use kernel::util::sync::WriteLock;
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState},
-    standard_runtime::FromIntoStandardEvent,
+    standard_runtime::StandardEventSuperset,
 };
 use main_loop::{prelude::Window, state::InitWinitState};
 use vulkano::command_buffer::SecondaryAutoCommandBuffer;
@@ -111,7 +111,7 @@ where
         + CallbackSubstate<GraphicsInitState>
         + CallbackSubstate<GuiState>
         + ClockworkState,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
 }
 impl<T, E> StateRequirements<E> for T
@@ -120,14 +120,14 @@ where
         + CallbackSubstate<GraphicsInitState>
         + CallbackSubstate<GuiState>
         + ClockworkState,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
 }
 
 pub(crate) fn init_vulkano<S, E>(engine_state: &S) -> (InternalMechanismState, GraphicsState, Gui)
 where
     S: StateRequirements<E>,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     /* ---- INSTANCE, SURFACE, GPU ---- */
     trace!("Creating Vulkan Instance");

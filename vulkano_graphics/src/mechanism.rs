@@ -11,7 +11,7 @@ use kernel::{
 };
 use kernel::{
     prelude::StandardEvent,
-    standard_runtime::{FromIntoStandardEvent, StandardMechanism},
+    standard_runtime::{StandardEventSuperset, StandardMechanism},
 };
 use main_loop::state::InitWinitState;
 use std::marker::PhantomData;
@@ -30,7 +30,7 @@ use winit::dpi::PhysicalSize;
 pub struct VulkanoGraphics<S, E>
 where
     S: ClockworkState,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     #[builder(setter(skip))]
     inner: Option<InternalMechanismState>,
@@ -45,7 +45,7 @@ where
 impl<S, E> VulkanoGraphics<S, E>
 where
     S: StateRequirements<E>,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     pub fn builder() -> VulkanoGraphicsBuilder<S, E> {
         Default::default()
@@ -55,7 +55,7 @@ where
 impl<S, E> VulkanoGraphicsBuilder<S, E>
 where
     S: StateRequirements<E>,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     pub fn add_layer(mut self, layer: impl VulkanoLayer<S> + 'static) -> Self {
         self.layers
@@ -68,7 +68,7 @@ where
 impl<S, E> StandardMechanism<S> for VulkanoGraphics<S, E>
 where
     S: StateRequirements<E>,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     fn initialization(&mut self, state: &mut EngineState<S>) {
         let (internal, graphics, gui) = state.start_access().get(|s: &S| init_vulkano(s)).finish();
@@ -114,7 +114,7 @@ fn draw<S, E>(
     }: &mut InternalMechanismState,
 ) where
     S: StateRequirements<E>,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     let GraphicsState {
         target_image_size,

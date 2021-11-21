@@ -3,7 +3,7 @@ use crate::{
         ClockworkEvent, ClockworkState, EngineState, MainLoop, Mechanism, Mechanisms,
     },
     standard_runtime::{
-        FromIntoStandardEvent, StandardEvent, StandardMechanism, StandardMechanismWrapper,
+        StandardEvent, StandardEventSuperset, StandardMechanism, StandardMechanismWrapper,
     },
     util::{derive_builder::Builder, log::*},
 };
@@ -61,7 +61,7 @@ where
     /// This method is only available for Clockwork, whose events are convertible to BaseEvents.
     pub fn add_standard_mechanism(self, mechanism: impl StandardMechanism<S> + 'static) -> Self
     where
-        E: FromIntoStandardEvent,
+        E: StandardEventSuperset,
     {
         self.add_mechanism(StandardMechanismWrapper::from(mechanism))
     }

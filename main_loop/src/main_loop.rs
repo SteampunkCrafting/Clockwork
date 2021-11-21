@@ -2,7 +2,8 @@ use crate::state::InitWinitState;
 use crate::state::{InputState, MainLoopStatistics};
 use kernel::abstract_runtime::{CallbackSubstate, EngineState, Mechanisms};
 use kernel::prelude::*;
-use kernel::standard_runtime::FromIntoStandardEvent;
+use kernel::standard_runtime::StandardEventSuperset;
+use std::convert::TryInto;
 use std::*;
 use winit::{
     event::{Event as WinitEvent, KeyboardInput, WindowEvent},
@@ -14,7 +15,7 @@ where
     S: CallbackSubstate<MainLoopStatistics>
         + CallbackSubstate<InitWinitState<E>>
         + CallbackSubstate<InputState>,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     /* -- INITIALIZING MECHANISMS -- */
     info!("Finished initialization of the main loop");
@@ -54,19 +55,29 @@ where
 
         /* ---- HANDLING EVENT ---- */
         match ev {
-            WinitEvent::UserEvent(ref e) if e.clone().into() == StandardEvent::Termination => {
+            WinitEvent::UserEvent(ref event)
+                if TryInto::<StandardEvent>::try_into(event.clone())
+                    .map(|standard_event| standard_event == StandardEvent::Termination)
+                    .and_then(|x| x.then(|| ()).ok_or(()))
+                    .is_ok() =>
+            {
                 debug!("Requested main loop termination");
                 debug!("Terminating mechanisms");
-                mechanisms.clink_event(&mut state, e.clone());
+                mechanisms.clink_event(&mut state, event.clone());
                 debug!("Terminating main loop");
                 *cf = ControlFlow::Exit;
                 debug!("Finished main loop termination");
             }
-            WinitEvent::UserEvent(ref e) => {
-                let standard_event = e.clone().into();
-                debug!("Handling standard event: {:?}", &standard_event);
-                mechanisms.clink_event(&mut state, e.clone());
-                debug!("Finished handling standard event: {:?}", &standard_event);
+            WinitEvent::UserEvent(ref event) => {
+                if let Ok(standard_event) = TryInto::<StandardEvent>::try_into(event.clone()) {
+                    debug!("Handling standard event: {:?}", &standard_event);
+                    mechanisms.clink_event(&mut state, event.clone());
+                    debug!("Finished handling standard event: {:?}", &standard_event);
+                } else {
+                    debug!("Handling custom event: {:?}", &event);
+                    mechanisms.clink_event(&mut state, event.clone());
+                    debug!("Finished handling custom event: {:?}", &event);
+                }
             }
             WinitEvent::WindowEvent {
                 event:

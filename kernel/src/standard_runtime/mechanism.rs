@@ -1,6 +1,6 @@
-use super::{FromIntoStandardEvent, StandardEvent};
+use super::{StandardEvent, StandardEventSuperset};
 use crate::abstract_runtime::{ClockworkState, EngineState, Mechanism};
-use std::marker::PhantomData;
+use std::{convert::TryInto, marker::PhantomData};
 
 /// A subset of Mechanisms, which is meant to work with the BaseEvent.
 pub trait StandardMechanism<S>
@@ -84,15 +84,17 @@ impl<T, S, E> Mechanism<S, E> for StandardMechanismWrapper<T, S>
 where
     T: StandardMechanism<S>,
     S: ClockworkState,
-    E: FromIntoStandardEvent,
+    E: StandardEventSuperset,
 {
     fn clink(&mut self, state: &mut EngineState<S>, event: E) {
-        (match Into::<StandardEvent>::into(event) {
-            StandardEvent::Initialization => T::initialization,
-            StandardEvent::Tick => T::tick,
-            StandardEvent::Draw => T::draw,
-            StandardEvent::Termination => T::termination,
-        })(&mut self.0, state)
+        TryInto::<StandardEvent>::try_into(event)
+            .map(|event| match event {
+                StandardEvent::Initialization => T::initialization,
+                StandardEvent::Tick => T::tick,
+                StandardEvent::Draw => T::draw,
+                StandardEvent::Termination => T::termination,
+            })
+            .map_or((), |f| f(&mut self.0, state))
     }
 
     fn handled_events(&self) -> Option<Vec<E>> {
