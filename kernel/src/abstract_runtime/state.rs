@@ -259,6 +259,32 @@ where
             state,
         }
     }
+
+    /// Executes a callback, which take a reference to a substate,
+    /// and then zips its return to the existing result.
+    pub fn then_get_zip<T, U>(
+        self,
+        callback: impl FnOnce(&T) -> U,
+    ) -> ReadCallbackGuard<'a, S, (R, U)>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        let Self { state, result } = self;
+        ReadCallbackGuard {
+            result: (result, state.0.callback_substate(callback)),
+            state,
+        }
+    }
+
+    /// Executes a callback on a result without performing a reading from a substate.
+    pub fn map<U>(self, callback: impl FnOnce(R) -> U) -> ReadCallbackGuard<'a, S, U> {
+        let Self { state, result } = self;
+        ReadCallbackGuard {
+            result: callback(result),
+            state,
+        }
+    }
 }
 
 impl<'a, S> WriteCallbackGuard<'a, S, ()>
@@ -323,6 +349,23 @@ where
         }
     }
 
+    /// Executes a callback, which take a reference to a substate,
+    /// and then zips its return to the existing result.
+    pub fn then_get_zip<T, U>(
+        self,
+        callback: impl FnOnce(&T) -> U,
+    ) -> WriteCallbackGuard<'a, S, (R, U)>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        let Self { state, result } = self;
+        WriteCallbackGuard {
+            result: (result, state.0.callback_substate(callback)),
+            state,
+        }
+    }
+
     /// Executes the callback, which takes a mutable reference to a substate,
     /// and the accumulated result, returning another accumulated result.
     pub fn then_get_mut<T, U>(
@@ -338,6 +381,32 @@ where
             result: state
                 .0
                 .callback_substate_mut(move |state| callback(result, state)),
+            state,
+        }
+    }
+
+    /// Executes a callback, which take a mutable reference to a substate,
+    /// and then zips its return to the existing result.
+    pub fn then_get_zip_mut<T, U>(
+        self,
+        callback: impl FnOnce(&mut T) -> U,
+    ) -> WriteCallbackGuard<'a, S, (R, U)>
+    where
+        T: ClockworkState,
+        S: CallbackSubstate<T>,
+    {
+        let Self { state, result } = self;
+        WriteCallbackGuard {
+            result: (result, state.0.callback_substate_mut(callback)),
+            state,
+        }
+    }
+
+    /// Executes a callback on a result without performing any reading from a substate, or writing to it.
+    pub fn map<U>(self, callback: impl FnOnce(R) -> U) -> WriteCallbackGuard<'a, S, U> {
+        let Self { state, result } = self;
+        WriteCallbackGuard {
+            result: callback(result),
             state,
         }
     }
