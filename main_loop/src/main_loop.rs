@@ -58,6 +58,7 @@ where
             WinitEvent::UserEvent(ref event)
                 if TryInto::<StandardEvent>::try_into(event.clone())
                     .map(|standard_event| standard_event == StandardEvent::Termination)
+                    .map_err(|_| ())
                     .and_then(|x| x.then(|| ()).ok_or(()))
                     .is_ok() =>
             {

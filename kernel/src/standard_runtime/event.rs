@@ -40,10 +40,10 @@ pub enum StandardEvent {
 /// Because this is a superset relation, `TryInto::Error` is an empty tuple.
 pub trait StandardEventSuperset
 where
-    Self: ClockworkEvent + TryInto<StandardEvent, Error = ()> + From<StandardEvent>,
+    Self: ClockworkEvent + TryInto<StandardEvent> + From<StandardEvent>,
 {
 }
 impl<E> StandardEventSuperset for E where
-    E: ClockworkEvent + TryInto<StandardEvent, Error = ()> + From<StandardEvent>
+    E: ClockworkEvent + TryInto<StandardEvent> + From<StandardEvent>
 {
 }
