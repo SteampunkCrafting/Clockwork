@@ -8,7 +8,6 @@ use vulkano::{
     image::{ImmutableImage, MipmapsCount},
     memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
     pipeline::{vertex::BuffersDefinition, GraphicsPipeline},
-    render_pass::Subpass,
     sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
 };
 
@@ -33,7 +32,7 @@ where
 {
     fn from(
         GraphicsState {
-            render_pass,
+            subpass,
             device,
             queue,
             ..
@@ -64,7 +63,7 @@ where
                     .depth_stencil_disabled()
                     .depth_write(false)
                     .cull_mode_front()
-                    .render_pass(Subpass::from(render_pass.clone(), 0).unwrap())
+                    .render_pass(subpass.clone())
                     .build(device.clone())
                     .unwrap(),
             ),

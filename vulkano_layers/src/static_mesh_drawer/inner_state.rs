@@ -10,8 +10,7 @@ use vulkano::{
     format::Format,
     image::{ImageDimensions, ImmutableImage, MipmapsCount},
     memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
-    pipeline::{vertex::BuffersDefinition, GraphicsPipeline},
-    render_pass::Subpass,
+    pipeline::{vertex::BuffersDefinition, viewport::Viewport, GraphicsPipeline},
     sampler::{Filter, MipmapMode, Sampler, SamplerAddressMode},
 };
 
@@ -36,44 +35,9 @@ impl<I> From<&GraphicsState> for InnerState<I>
 where
     I: AssetStorageKey,
 {
-    fn from(
-        GraphicsState {
-            render_pass,
-            device,
-            queue,
-            ..
-        }: &GraphicsState,
-    ) -> Self {
-        let subpass = Subpass::from(render_pass.clone(), 0).unwrap();
+    fn from(graphics_state @ GraphicsState { device, queue, .. }: &GraphicsState) -> Self {
         Self {
-            pipeline: Arc::new(
-                GraphicsPipeline::start()
-                    .vertex_input(
-                        BuffersDefinition::new()
-                            .vertex::<Vertex>()
-                            .instance::<InstanceData>(),
-                    )
-                    .vertex_shader(
-                        vertex_shader::Shader::load(device.clone())
-                            .unwrap()
-                            .main_entry_point(),
-                        (),
-                    )
-                    .triangle_list()
-                    .viewports_dynamic_scissors_irrelevant(1)
-                    .fragment_shader(
-                        fragment_shader::Shader::load(device.clone())
-                            .unwrap()
-                            .main_entry_point(),
-                        (),
-                    )
-                    .blend_alpha_blending()
-                    .depth_stencil_simple_depth()
-                    .cull_mode_back()
-                    .render_pass(subpass)
-                    .build(device.clone())
-                    .unwrap(),
-            ),
+            pipeline: generate_pipeline(graphics_state),
             vertex_uniform_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
             fragment_uniform_mesh_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
             fragment_uniform_world_pool: CpuBufferPool::new(device.clone(), BufferUsage::all()),
@@ -120,6 +84,49 @@ mod fragment_shader {
         ty: "fragment",
         path: "glsl/static_mesh_drawer.frag"
     }
+}
+
+pub fn generate_pipeline(
+    GraphicsState {
+        subpass,
+        device,
+        target_image_size: [width, height],
+        ..
+    }: &GraphicsState,
+) -> Arc<GraphicsPipeline> {
+    Arc::new(
+        GraphicsPipeline::start()
+            .vertex_input(
+                BuffersDefinition::new()
+                    .vertex::<Vertex>()
+                    .instance::<InstanceData>(),
+            )
+            .vertex_shader(
+                vertex_shader::Shader::load(device.clone())
+                    .unwrap()
+                    .main_entry_point(),
+                (),
+            )
+            .triangle_list()
+            .viewports_dynamic_scissors_irrelevant(1)
+            .viewports([Viewport {
+                origin: [0.0, *height as f32],
+                dimensions: [*width as f32, -(*height as f32)],
+                depth_range: 0.0..1.0,
+            }])
+            .fragment_shader(
+                fragment_shader::Shader::load(device.clone())
+                    .unwrap()
+                    .main_entry_point(),
+                (),
+            )
+            .blend_alpha_blending()
+            .depth_stencil_simple_depth()
+            .cull_mode_back()
+            .render_pass(subpass.clone())
+            .build(device.clone())
+            .unwrap(),
+    )
 }
 
 pub fn make_vertex_uniforms(

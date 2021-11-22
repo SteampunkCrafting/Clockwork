@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use egui_winit_vulkano::Gui;
+use kernel::abstract_runtime::EngineState;
 use kernel::util::init_state::InitState;
 use kernel::util::log::{debug, info, trace};
 use kernel::util::sync::WriteLock;
@@ -26,18 +27,17 @@ use winit::{dpi::PhysicalSize, window::WindowBuilder};
 #[derive(Clone)]
 pub struct GraphicsState {
     pub target_image_size: [u32; 2],
-    pub render_pass: Arc<RenderPass>,
+    pub subpass: Subpass,
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
 }
-
-pub type GraphicsInitState = InitState<(), GraphicsState>;
 
 pub(crate) struct InternalMechanismState {
     pub swapchain: Arc<Swapchain<Window>>,
     pub previous_frame_end: Option<Box<dyn GpuFuture>>,
     pub recreate_swapchain: bool,
     pub framebuffers: Vec<Arc<dyn FramebufferAbstract + Send + Sync>>,
+    pub graphics_state: GraphicsState,
 }
 
 pub struct GuiState {
@@ -107,24 +107,18 @@ impl Default for GuiState {
 
 pub trait StateRequirements<E>
 where
-    Self: CallbackSubstate<InitWinitState<E>>
-        + CallbackSubstate<GraphicsInitState>
-        + CallbackSubstate<GuiState>
-        + ClockworkState,
+    Self: CallbackSubstate<InitWinitState<E>> + CallbackSubstate<GuiState> + ClockworkState,
     E: StandardEventSuperset,
 {
 }
 impl<T, E> StateRequirements<E> for T
 where
-    T: CallbackSubstate<InitWinitState<E>>
-        + CallbackSubstate<GraphicsInitState>
-        + CallbackSubstate<GuiState>
-        + ClockworkState,
+    T: CallbackSubstate<InitWinitState<E>> + CallbackSubstate<GuiState> + ClockworkState,
     E: StandardEventSuperset,
 {
 }
 
-pub(crate) fn init_vulkano<S, E>(engine_state: &S) -> (InternalMechanismState, GraphicsState, Gui)
+pub(crate) fn init_vulkano<S, E>(engine_state: &EngineState<S>) -> (InternalMechanismState, Gui)
 where
     S: StateRequirements<E>,
     E: StandardEventSuperset,
@@ -138,18 +132,15 @@ where
         None,
     ).expect("Failed to create Vulkan instance\nCheck if Vulkan runtime is installed, and, if not, install it from https://vulkan.lunarg.com/sdk/home");
 
-    let surface = {
-        let mut surface = None;
-        CallbackSubstate::callback_substate(engine_state, |ml: &InitWinitState<E>| {
+    let surface = engine_state
+        .start_access()
+        .get(|ml: &InitWinitState<E>| {
             trace!("Instantiating window and surface");
-            surface = Some(
-                WindowBuilder::new()
-                    .build_vk_surface(ml.uninit_event_loop(), instance.clone())
-                    .expect("Failed to build surface"),
-            );
-        });
-        surface.unwrap()
-    };
+            WindowBuilder::new()
+                .build_vk_surface(ml.uninit_event_loop(), instance.clone())
+                .expect("Failed to build surface")
+        })
+        .finish();
 
     trace!("Getting physical device");
     debug!(
@@ -267,15 +258,15 @@ where
             previous_frame_end: Some(sync::now(device.clone()).boxed()),
             recreate_swapchain: false,
             framebuffers,
-        },
-        GraphicsState {
-            target_image_size: {
-                let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
-                [width, height]
+            graphics_state: GraphicsState {
+                target_image_size: {
+                    let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
+                    [width, height]
+                },
+                subpass: Subpass::from(render_pass, 0).unwrap().into(),
+                queue: queue.clone(),
+                device,
             },
-            render_pass: render_pass.clone(),
-            queue: queue.clone(),
-            device,
         },
         gui,
     )

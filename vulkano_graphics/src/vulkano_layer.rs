@@ -1,18 +1,15 @@
-use kernel::abstract_runtime::{CallbackSubstate, EngineState};
+use kernel::abstract_runtime::{ClockworkState, EngineState};
 use vulkano::command_buffer::{
     pool::standard::StandardCommandPoolAlloc, AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
     SecondaryAutoCommandBuffer,
 };
 
-use crate::state::{GraphicsInitState, GraphicsState};
-
-pub trait StateRequirements: CallbackSubstate<GraphicsInitState> {}
-impl<T> StateRequirements for T where T: CallbackSubstate<GraphicsInitState> {}
+use crate::state::GraphicsState;
 
 #[deprecated]
 pub trait OldVulkanoLayer<S>
 where
-    S: StateRequirements,
+    S: ClockworkState,
 {
     fn draw(
         &mut self,
@@ -26,7 +23,7 @@ where
 impl<T, S> OldVulkanoLayer<S> for T
 where
     T: FnMut(&S, &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer<StandardCommandPoolAlloc>>),
-    S: StateRequirements,
+    S: ClockworkState,
 {
     fn draw(
         &mut self,
@@ -41,21 +38,11 @@ where
 
 pub trait VulkanoLayer<S>
 where
-    S: StateRequirements,
+    S: ClockworkState,
 {
-    fn initialization(
-        &mut self,
-        engine_state: &EngineState<S>,
-        graphics_state: &GraphicsState,
-        window_dimensions: [u32; 2],
-    );
+    fn initialization(&mut self, engine_state: &EngineState<S>, graphics_state: &GraphicsState);
 
-    fn window_resize(
-        &mut self,
-        engine_state: &EngineState<S>,
-        graphics_state: &GraphicsState,
-        window_dimensions: [u32; 2],
-    );
+    fn window_resize(&mut self, engine_state: &EngineState<S>, graphics_state: &GraphicsState);
 
     fn draw(
         &mut self,

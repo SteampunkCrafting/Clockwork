@@ -7,8 +7,7 @@ use scene_utils::prelude::{PhongMaterialStorage, TexturedMeshStorage};
 
 /// State requirements for this layer in order to be considered renderable
 pub trait StateRequirements<I>:
-    vulkano_layer::StateRequirements
-    + CallbackSubstate<PhysicsState>
+    CallbackSubstate<PhysicsState>
     + CallbackSubstate<LegionState>
     + CallbackSubstate<TexturedMeshStorage<I>>
     + CallbackSubstate<PhongMaterialStorage<I>>
@@ -19,8 +18,7 @@ where
 
 impl<T, I> StateRequirements<I> for T
 where
-    T: vulkano_layer::StateRequirements
-        + CallbackSubstate<PhysicsState>
+    T: CallbackSubstate<PhysicsState>
         + CallbackSubstate<LegionState>
         + CallbackSubstate<TexturedMeshStorage<I>>
         + CallbackSubstate<PhongMaterialStorage<I>>,

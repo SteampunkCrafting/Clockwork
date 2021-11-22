@@ -1,7 +1,7 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::state::{GraphicsInitState, GuiState};
+use graphics::state::GuiState;
 use kernel::{
     abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
     prelude::StandardEvent,
@@ -34,8 +34,6 @@ where
     main_loop_state: InitWinitState<StandardEvent>,
 
     assets: Assets<C>,
-
-    graphics_state: GraphicsInitState,
 }
 
 impl<C> ClockworkState for BaseState<C> where C: AssetStorageKey {}
@@ -69,7 +67,6 @@ where
             ecs: LegionState::builder().build().unwrap(),
             assets: assets.ok_or("Missing assets")?,
             main_loop_state: InitWinitState::builder().build().unwrap(),
-            graphics_state: Default::default(),
         };
         let BaseState {
             ecs: LegionState { resources, .. },
@@ -137,19 +134,6 @@ where
             ..
         } = self;
         callback(&mut resources.get_mut().unwrap())
-    }
-}
-
-impl<C> Substate<GraphicsInitState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &GraphicsInitState {
-        &self.graphics_state
-    }
-
-    fn substate_mut(&mut self) -> &mut GraphicsInitState {
-        &mut self.graphics_state
     }
 }
 

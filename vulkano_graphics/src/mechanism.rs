@@ -1,26 +1,25 @@
-use crate::vulkano_layer::OldVulkanoLayer;
 use crate::{
     state::{
-        init_vulkano, window_size_dependent_setup, GraphicsInitState, GraphicsState, GuiState,
-        InternalMechanismState, StateRequirements,
+        init_vulkano, window_size_dependent_setup, GraphicsState, GuiState, InternalMechanismState,
+        StateRequirements,
     },
     vulkano_layer::VulkanoLayer,
 };
 use kernel::{
     abstract_runtime::{ClockworkState, EngineState},
-    util::{derive_builder::Builder, sync::WriteLock},
+    util::{derive_builder::Builder, init_state::InitState, sync::WriteLock},
 };
 use kernel::{
     prelude::StandardEvent,
     standard_runtime::{StandardEventSuperset, StandardMechanism},
 };
+use main_loop::prelude::{Event, WindowEvent};
 use main_loop::state::InitWinitState;
 use std::marker::PhantomData;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, SubpassContents},
     format::Format,
     image::AttachmentImage,
-    pipeline::viewport::Viewport,
     swapchain::{self, AcquireError, SwapchainCreationError},
     sync::{self, FlushError, GpuFuture},
 };
@@ -34,16 +33,16 @@ where
     E: StandardEventSuperset,
 {
     #[builder(setter(skip))]
-    inner: Option<InternalMechanismState>,
-
-    #[builder(private, setter(name = "__old_layers", into = "false"), default)]
-    old_layers: Vec<Box<dyn OldVulkanoLayer<S>>>,
+    inner: InitState<(), InternalMechanismState>,
 
     #[builder(private, setter(name = "__layers", into = "false"), default)]
     layers: Vec<Box<dyn VulkanoLayer<S>>>,
 
     #[builder(setter(skip))]
     phantom_data: PhantomData<E>,
+
+    #[builder(setter(skip), default)]
+    window_resize: WriteLock<Option<[u32; 2]>>,
 }
 
 impl<S, E> VulkanoGraphics<S, E>
@@ -61,14 +60,6 @@ where
     S: StateRequirements<E>,
     E: StandardEventSuperset,
 {
-    #[deprecated]
-    pub fn add_old_layer(mut self, old_layer: impl OldVulkanoLayer<S> + 'static) -> Self {
-        self.old_layers
-            .get_or_insert(Default::default())
-            .push(Box::new(old_layer));
-        self
-    }
-
     pub fn add_layer(mut self, old_layer: impl VulkanoLayer<S> + 'static) -> Self {
         self.layers
             .get_or_insert(Default::default())
@@ -83,22 +74,49 @@ where
     E: StandardEventSuperset,
 {
     fn initialization(&mut self, state: &mut EngineState<S>) {
-        let (internal, graphics, gui) = state.start_access().get(|s: &S| init_vulkano(s)).finish();
+        /* ---- INITIALIZING OWN STATE ---- */
+        let (internal, gui) = init_vulkano(state);
         let gui = WriteLock::from(gui);
-        let _ = self.inner.insert(internal);
+        self.inner.initialize(|()| internal);
         state
             .start_mutate()
-            .get_mut(|s: &mut GraphicsInitState| s.initialize(move |_| graphics))
+            /* -- INITIALIZING SHARED STATE -- */
             .get_mut(|s: &mut GuiState| s.initialize(gui.clone()))
+            /* -- SUBSCRIBING TO WINDOW RESIZE EVENT -- */
             .get_mut(|s: &mut InitWinitState<E>| {
-                s.add_event_callback(move |ev| gui.lock_mut().update(ev))
+                let mut window_resize = self.window_resize.downgrade_to_user_lock();
+                s.add_event_callback(move |ev| match ev {
+                    Event::WindowEvent {
+                        window_id: _,
+                        event: WindowEvent::Resized(PhysicalSize { width, height }),
+                    } => *window_resize.lock_mut() = Some([*width, *height]),
+                    _ => (),
+                });
+                s.add_event_callback(move |ev| gui.lock_mut().update(ev));
             })
-            .finish()
+            .finish();
+
+        /* ---- INITIALIZING LAYER STATES ---- */
+        let Self { layers, inner, .. } = self;
+        layers
+            .iter_mut()
+            .for_each(|layer| layer.initialization(state, &inner.get_init().graphics_state))
     }
 
     fn draw(&mut self, state: &mut EngineState<S>) {
-        let (layers, inner) = (&mut self.old_layers, self.inner.as_mut().unwrap());
-        draw(state, layers, inner)
+        /* ---- HANDLING POTENTIAL RESIZE ---- */
+        let window_resize = self.window_resize.lock_mut().take();
+        window_resize.map_or((), |dims| {
+            let Self { layers, inner, .. } = self;
+            let InternalMechanismState { graphics_state, .. } = inner.get_init_mut();
+            graphics_state.target_image_size = dims;
+            layers
+                .iter_mut()
+                .for_each(|layer| layer.window_resize(state, graphics_state))
+        });
+
+        /* ---- DRAWING ---- */
+        draw(state, &mut self.layers, self.inner.get_init_mut());
     }
 
     fn handled_events(&self) -> Option<Vec<StandardEvent>> {
@@ -114,30 +132,28 @@ where
     }
 }
 
-/// Draws on the window by means of activating VulkanoLayers
 fn draw<S, E>(
     state: &mut EngineState<S>,
-    layers: &mut Vec<Box<dyn OldVulkanoLayer<S>>>,
+    layers: &mut Vec<Box<dyn VulkanoLayer<S>>>,
     InternalMechanismState {
         swapchain,
         previous_frame_end,
         recreate_swapchain,
         framebuffers,
+        graphics_state,
     }: &mut InternalMechanismState,
 ) where
     S: StateRequirements<E>,
     E: StandardEventSuperset,
 {
-    let GraphicsState {
+    let graphics_state
+    @
+    GraphicsState {
         target_image_size,
-        render_pass,
+        subpass: render_pass,
         device,
         queue,
-    } = state
-        .start_access()
-        .get(|gs: &GraphicsInitState| gs.get_init().clone())
-        .finish();
-
+    } = &graphics_state;
     /* ---- GARBAGE COLLECTING ---- */
     previous_frame_end.as_mut().unwrap().cleanup_finished();
 
@@ -159,13 +175,8 @@ fn draw<S, E>(
             .collect::<Vec<_>>();
 
         *swapchain = new_swapchain;
-        *framebuffers = window_size_dependent_setup(&new_images, render_pass.clone());
+        *framebuffers = window_size_dependent_setup(&new_images, render_pass.render_pass().clone());
         *recreate_swapchain = false;
-
-        state.start_mutate().get_mut(|gs: &mut GraphicsInitState| {
-            let PhysicalSize { width, height } = swapchain.surface().window().inner_size();
-            gs.get_init_mut().target_image_size = [width, height];
-        });
     }
 
     let (image_num, suboptimal, acquire_future) =
@@ -183,8 +194,6 @@ fn draw<S, E>(
     }
 
     /* ---- DRAWING ---- */
-    let [width, height] = target_image_size;
-
     /* -- BUILDING COMMAND BUFFER --  */
     let command_buffer = {
         let mut builder = AutoCommandBufferBuilder::primary(
@@ -194,26 +203,20 @@ fn draw<S, E>(
         )
         .unwrap();
         builder
-            .set_viewport(
-                0,
-                [Viewport {
-                    origin: [0.0, height as f32],
-                    dimensions: [width as f32, -(height as f32)],
-                    depth_range: 0.0..1.0,
-                }],
-            )
             .begin_render_pass(
                 framebuffers[image_num].clone(),
-                vulkano::command_buffer::SubpassContents::Inline,
+                vulkano::command_buffer::SubpassContents::SecondaryCommandBuffers,
                 vec![[0.0, 0.0, 0.0].into(), 1f32.into()],
             )
             .unwrap();
 
-        state.start_access().get(|state: &S| {
-            layers
-                .iter_mut()
-                .for_each(|layer| layer.draw(state, &mut builder));
-        });
+        layers
+            .iter_mut()
+            .map(|layer| layer.draw(state, graphics_state))
+            .fold(Ok(&mut builder), |res, cmd| {
+                res.and_then(|builder| builder.execute_commands(cmd))
+            })
+            .unwrap();
 
         builder
             .next_subpass(SubpassContents::SecondaryCommandBuffers)
@@ -223,7 +226,9 @@ fn draw<S, E>(
             .execute_commands(
                 state
                     .start_mutate()
-                    .get_mut(|gui: &mut GuiState| gui.init_draw_on_subpass_image([width, height]))
+                    .get_mut(|gui: &mut GuiState| {
+                        gui.init_draw_on_subpass_image(target_image_size.clone())
+                    })
                     .finish(),
             )
             .unwrap();
