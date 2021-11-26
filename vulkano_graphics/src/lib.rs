@@ -10,7 +10,6 @@ pub mod prelude {
     pub use crate::gui::Gui;
     pub use crate::mechanism::VulkanoGraphics;
     pub use crate::state::GraphicsState;
-    pub use crate::vulkano_layer::OldVulkanoLayer;
 }
 
 pub mod gui {

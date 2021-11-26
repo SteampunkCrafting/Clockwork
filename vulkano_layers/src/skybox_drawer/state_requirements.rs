@@ -1,5 +1,4 @@
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::vulkano_layer;
 use kernel::abstract_runtime::CallbackSubstate;
 use legion_ecs::state::LegionState;
 use physics::state::PhysicsState;

@@ -1,9 +1,6 @@
 use self::inner_state::InnerState;
 use asset_storage::asset_storage::AssetStorageKey;
-use graphics::{
-    state::GraphicsState,
-    vulkano_layer::{OldVulkanoLayer, VulkanoLayer},
-};
+use graphics::{state::GraphicsState, vulkano_layer::VulkanoLayer};
 use kernel::{abstract_runtime::EngineState, prelude::Itertools, util::init_state::InitState};
 use legion_ecs::{
     prelude::{component, IntoQuery},
