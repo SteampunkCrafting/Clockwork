@@ -33,14 +33,34 @@ pub mod clockwork;
 /// A set of utilities for a standard Clockwork runtime.
 pub mod standard_runtime {
     /* ---- PRIVATE ---- */
+    /// Standard Clockwork Event definitions.
     mod event;
+    /// Standard mechanism definitions.
     mod mechanism;
+    /// Standard statistics trait.
     mod statistics;
 
     /* ---- PUBLIC ---- */
     pub use event::*;
     pub use mechanism::*;
     pub use statistics::*;
+}
+
+/// Math utilities.
+///
+/// This module may eventually become a separate crate
+pub mod math {
+    /* ---- PRIVATE ---- */
+    mod matrix;
+
+    /* ---- PUBLIC ---- */
+    pub use matrix::Matrix;
+    pub type Mat2 = Matrix<f32, 2, 2>;
+    pub type Mat3 = Matrix<f32, 3, 3>;
+    pub type Mat4 = Matrix<f32, 4, 4>;
+    pub type Vec2 = Matrix<f32, 2, 1>;
+    pub type Vec3 = Matrix<f32, 3, 1>;
+    pub type Vec4 = Matrix<f32, 4, 1>;
 }
 
 /// Utilities
