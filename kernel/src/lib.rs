@@ -46,9 +46,36 @@ pub mod standard_runtime {
     pub use statistics::*;
 }
 
+/// A set of structs and traits for computer graphics
+/// and rendering.
+pub mod graphics {
+    /* ---- PRIVATE ---- */
+    /// A module, which defines the trait for the
+    mod layer_key;
+    /// A module, which defines the trait for the lights
+    mod light;
+    /// A module, which contains a clockwork substate trait, which
+    /// can act as a renderable collection, providing renderers
+    /// with a camera, assets and instances, required for drawing.
+    mod scene;
+
+    /* ---- PUBLIC ---- */
+    /// A module, which defines a trait of an abstract object of the scene,
+    /// as well as some additional parts it contain.
+    mod scene_object;
+    /// A module, which contains a `Vertex` trait
+    pub mod vertex;
+
+    pub use layer_key::RenderingLayerKey;
+    pub use light::*;
+    pub use scene::Scene;
+    pub use scene_object::SceneObject;
+    pub use vertex::Vertex;
+}
+
 /// Math utilities.
 ///
-/// This module may eventually become a separate crate
+/// > This module may eventually become a separate crate
 pub mod math {
     /* ---- PRIVATE ---- */
     mod matrix;
