@@ -1,4 +1,4 @@
-use crate::math::{Mat4, Vec3};
+use crate::math::Mat4;
 
 /// A trait, which is implemented by every spacial object with geometry.
 pub trait SceneObject {
