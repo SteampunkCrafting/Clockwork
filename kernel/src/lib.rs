@@ -55,6 +55,7 @@ pub mod math {
 
     /* ---- PUBLIC ---- */
     pub use matrix::Matrix;
+    pub type Vector<const N: usize> = Matrix<f32, N, 1>;
     pub type Mat2 = Matrix<f32, 2, 2>;
     pub type Mat3 = Matrix<f32, 3, 3>;
     pub type Mat4 = Matrix<f32, 4, 4>;
