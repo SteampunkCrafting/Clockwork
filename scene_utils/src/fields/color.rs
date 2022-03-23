@@ -1,3 +1,4 @@
+use kernel::math::{Vec3, Vec4};
 use std::convert::{TryFrom, TryInto};
 
 #[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq)]
@@ -6,6 +7,44 @@ pub struct Color {
     green: u8,
     blue: u8,
     alpha: u8,
+}
+
+impl kernel::graphics::light_components::Color for Color {
+    fn color(&self) -> Vec3 {
+        self.clone().into()
+    }
+}
+
+impl TryFrom<Vec4> for Color {
+    type Error = &'static str;
+
+    fn try_from(x: Vec4) -> Result<Self, Self::Error> {
+        let x: [f32; 4] = x.into();
+        x.try_into()
+    }
+}
+
+impl Into<Vec4> for Color {
+    fn into(self) -> Vec4 {
+        let x: [f32; 4] = self.into();
+        x.into()
+    }
+}
+
+impl TryFrom<Vec3> for Color {
+    type Error = &'static str;
+
+    fn try_from(x: Vec3) -> Result<Self, Self::Error> {
+        let x: [f32; 3] = x.into();
+        x.try_into()
+    }
+}
+
+impl Into<Vec3> for Color {
+    fn into(self) -> Vec3 {
+        let x: [f32; 3] = self.into();
+        x.into()
+    }
 }
 
 impl From<[u8; 4]> for Color {

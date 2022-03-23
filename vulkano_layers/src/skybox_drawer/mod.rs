@@ -41,9 +41,7 @@ where
     fn draw(
         &mut self,
         engine_state: &EngineState<S>,
-        graphics_state
-        @
-        GraphicsState {
+        graphics_state @ GraphicsState {
             target_image_size: [width, height],
             subpass,
             device,

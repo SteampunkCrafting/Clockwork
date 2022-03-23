@@ -10,6 +10,12 @@ pub struct Attenuation {
     pub quadratic: f32,
 }
 
+impl kernel::graphics::light_components::Attenuation for Attenuation {
+    fn attenuation(&self) -> kernel::math::Vec3 {
+        [self.constant, self.linear, self.quadratic].into()
+    }
+}
+
 impl Default for Attenuation {
     fn default() -> Self {
         Self {

@@ -10,6 +10,9 @@ use main_loop::state::{InitWinitState, InputState, MainLoopStatistics};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 
+mod scene_impls;
+mod scene_instance;
+
 #[derive(Builder)]
 #[builder(pattern = "owned", setter(into, prefix = "with"))]
 pub struct Assets<C>

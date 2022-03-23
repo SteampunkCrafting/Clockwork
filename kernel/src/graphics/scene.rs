@@ -1,10 +1,18 @@
+use crate::abstract_runtime::ClockworkState;
+
 use super::{
     layer_key::RenderingLayerKey, scene_object, AmbientLight, DirectionalLight, PointLight,
     SceneObject, SpotLight,
 };
 
-/// A marker trait for the collection of objects on the scene
-pub trait Scene {
+/// A local type for iterators
+pub type Iter<T> = Box<dyn Iterator<Item = T>>;
+
+/// A trait for the collection of objects on the scene
+pub trait Scene
+where
+    Self: ClockworkState,
+{
     /// An associated type, which sets the LayerKey,
     /// used by the scene to select and pass renderables
     /// to the layers.
@@ -17,11 +25,8 @@ where
     Self: Scene,
     T: SceneObject,
 {
-    /// An iterator type over instances
-    type InstanceIter: Iterator<Item = T>;
-
     /// Gets an iterator over the scene instances
-    fn instances(&self, layer_key: Self::LayerKey) -> Self::InstanceIter;
+    fn scene_objects(&self, layer_key: Self::LayerKey) -> Iter<T>;
 }
 
 /// A trait of Scene with at least one camera, which is
@@ -39,6 +44,7 @@ where
     fn primary_camera(&self, layer_key: Self::LayerKey) -> T;
 }
 
+/// A trait of Scene with all types of lights
 pub trait Lights<A, D, P, S>
 where
     Self: Scene,
@@ -47,24 +53,15 @@ where
     P: PointLight,
     S: SpotLight,
 {
-    /// Directional light iterator type
-    type DirLightIter: Iterator<Item = D>;
-
-    /// Point light iterator type
-    type PointLightIter: Iterator<Item = P>;
-
-    /// Spot light iterator type
-    type SpotLightIter: Iterator<Item = S>;
-
     /// Gets the scene ambient light
     fn ambient_light(&self, layer_key: Self::LayerKey) -> A;
 
-    /// Gets scene directional lights
-    fn directional_lights(&self, layer_key: Self::LayerKey) -> Self::DirLightIter;
+    /// Gets an iterator over scene directional lights
+    fn directional_lights(&self, layer_key: Self::LayerKey) -> Iter<D>;
 
-    /// Gets scene point lights
-    fn point_lights(&self, layer_key: Self::LayerKey) -> Self::PointLightIter;
+    /// Gets an iterator over scene point lights
+    fn point_lights(&self, layer_key: Self::LayerKey) -> Iter<P>;
 
-    /// Gets scene spot lights
-    fn spot_lights(&self, layer_key: Self::LayerKey) -> Self::SpotLightIter;
+    /// Gets an iterator over scene spot lights
+    fn spot_lights(&self, layer_key: Self::LayerKey) -> Iter<S>;
 }

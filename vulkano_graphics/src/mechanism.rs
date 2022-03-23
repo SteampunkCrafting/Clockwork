@@ -146,9 +146,7 @@ fn draw<S, E>(
     S: StateRequirements<E>,
     E: StandardEventSuperset,
 {
-    let graphics_state
-    @
-    GraphicsState {
+    let graphics_state @ GraphicsState {
         target_image_size,
         subpass: render_pass,
         device,

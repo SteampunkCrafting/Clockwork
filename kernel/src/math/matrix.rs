@@ -10,14 +10,35 @@ use std::{
 /// This structure is used primarily for linear algebra.
 pub struct Matrix<T, const N: usize, const M: usize>([[T; M]; N]);
 
-/// Everything, which is convertible to a 2D array is also convertible to
-/// the Matrix.
-impl<U, T, const N: usize, const M: usize> From<U> for Matrix<T, N, M>
-where
-    U: Into<[[T; M]; N]>,
-{
-    fn from(x: U) -> Self {
-        Self(x.into())
+/// A 2D array can be converted to a matrix
+impl<T, const N: usize, const M: usize> From<[[T; M]; N]> for Matrix<T, N, M> {
+    fn from(x: [[T; M]; N]) -> Self {
+        Self(x)
+    }
+}
+
+/// A Matrix can be converted to a 2D array
+impl<T, const N: usize, const M: usize> Into<[[T; M]; N]> for Matrix<T, N, M> {
+    fn into(self) -> [[T; M]; N] {
+        self.0
+    }
+}
+
+/// A 1D array can be converted to a column vector
+///
+/// As of now, this is only restricted to `Copy` types
+impl<T, const N: usize> From<[T; N]> for Matrix<T, N, 1> {
+    fn from(x: [T; N]) -> Self {
+        Self(x.map(|x| [x]))
+    }
+}
+
+/// A column vector can be converted to a 1D array
+///
+/// As of now, this is only restricted to `Copy` types
+impl<T: Copy, const N: usize> Into<[T; N]> for Matrix<T, N, 1> {
+    fn into(self) -> [T; N] {
+        self.0.map(|x| x[0])
     }
 }
 

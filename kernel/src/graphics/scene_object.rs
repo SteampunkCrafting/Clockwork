@@ -1,6 +1,8 @@
+use super::scene_object_components::*;
 use crate::math::Mat4;
 
 /// A trait, which is implemented by every spacial object with geometry.
+#[ambassador::delegatable_trait]
 pub trait SceneObject {
     /// Gets the homogeneous world matrix, i.e. a linear transformation
     /// from the local space of the object to the world space.
@@ -9,27 +11,7 @@ pub trait SceneObject {
     /// Gets the homogeneous view matrix, i.e. a linear transformation
     /// from the world space to the local space of the object.
     fn view_matrix(&self) -> Mat4;
-}
 
-/// A subtype of `SceneObject`, which represents
-/// a Camera, and contains a projection matrix.
-pub trait Camera
-where
-    Self: SceneObject,
-{
-    /// Gets the projection matrix of the camera,
-    /// i.e. a linear transformation from local space to
-    /// a camera local space, which is later projected onto
-    /// a 2D plane.
-    fn projection_matrix(&self) -> Mat4;
-}
-
-/// A subtype of `SceneObject`, which
-/// contains a normal matrix
-pub trait NormalMatrix
-where
-    Self: SceneObject,
-{
     /// Get the homogeneous normal matrix, i.e. a model matrix for normals.
     ///
     /// For the case of a uniform scaling, it is just a world matrix,
@@ -38,8 +20,18 @@ where
     fn normal_matrix(&self) -> Mat4;
 }
 
+/// A subtype of `SceneObject`, which represents
+/// a Camera, and contains a projection matrix.
+#[ambassador::delegatable_trait]
+pub trait Camera
+where
+    Self: SceneObject + ProjectionMatrix,
+{
+}
+
 /// A subtype of a `SceneObject`,
 /// which contains some mesh geometry.
+#[ambassador::delegatable_trait]
 pub trait Mesh<MeshID>
 where
     Self: SceneObject,
@@ -50,6 +42,7 @@ where
 
 /// A subtype of a `SceneObject`,
 /// which contains some material.
+#[ambassador::delegatable_trait]
 pub trait Material<MaterialID>
 where
     Self: SceneObject,
@@ -60,6 +53,7 @@ where
 
 /// A subtype of a `SceneObject`,
 /// which contains some skeletal animations
+#[ambassador::delegatable_trait]
 pub trait Skeletal<SkeletonID, AnimationID = SkeletonID>
 where
     Self: SceneObject,

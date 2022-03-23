@@ -1,9 +1,15 @@
 use asset_storage::asset_storage::AssetStorageKey;
 use graphics::state::GraphicsState;
-use physics::prelude::{nalgebra::Vector4, RigidBody};
-use scene_utils::components::{
-    AmbientLight, Camera, DirectionalLight, PhongMaterial, PointLight, SpotLight,
+use kernel::{
+    graphics::{scene_object::Camera, AmbientLight, DirectionalLight, PointLight, SpotLight},
+    math::{Mat4, Vec3, Vec4},
+    prelude::Itertools,
 };
+use scene_utils::components::PhongMaterial;
+// use physics::prelude::{nalgebra::Vector4, RigidBody};
+// use scene_utils::components::{
+//     AmbientLight, Camera, DirectionalLight, PhongMaterial, PointLight, SpotLight,
+// };
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuBufferPool},
@@ -130,10 +136,13 @@ pub fn generate_pipeline(
 }
 
 pub fn make_vertex_uniforms(
-    projection: [[f32; 4]; 4],
-    view: [[f32; 4]; 4],
+    projection: impl AsRef<[[f32; 4]; 4]>,
+    view: impl AsRef<[[f32; 4]; 4]>,
 ) -> vertex_shader::ty::Data {
-    vertex_shader::ty::Data { projection, view }
+    vertex_shader::ty::Data {
+        projection: projection.as_ref().clone(),
+        view: view.as_ref().clone(),
+    }
 }
 
 pub fn make_mesh_fragment_uniforms(material: PhongMaterial) -> fragment_shader::ty::DataMesh {
@@ -167,47 +176,65 @@ pub fn make_mesh_fragment_uniforms(material: PhongMaterial) -> fragment_shader::
     }
 }
 
-pub fn make_world_fragment_uniforms(
-    (_, camera_body): (Camera, RigidBody),
-    AmbientLight { color }: AmbientLight,
-    dir_lights: Vec<DirectionalLight>,
-    point_lights: Vec<(PointLight, RigidBody)>,
-    spot_lights: Vec<(SpotLight, RigidBody)>,
-) -> fragment_shader::ty::DataWorld {
+pub fn make_world_fragment_uniforms<D, P, S>(
+    camera: impl Camera,
+    ambient_light: impl AmbientLight,
+    dir_lights: impl IntoIterator<Item = D>,
+    point_lights: impl IntoIterator<Item = P>,
+    spot_lights: impl IntoIterator<Item = S>,
+) -> fragment_shader::ty::DataWorld
+where
+    D: DirectionalLight,
+    P: PointLight,
+    S: SpotLight,
+{
     use fragment_shader::ty::*;
+
+    let dir_lights = dir_lights.into_iter().collect_vec();
+    let point_lights = point_lights.into_iter().collect_vec();
+    let spot_lights = spot_lights.into_iter().collect_vec();
+
     unsafe {
-        fragment_shader::ty::DataWorld {
+        let make_1d: fn(Vec3) -> [f32; 3] = |mat: Vec3| [mat[(0, 0)], mat[(1, 0)], mat[(2, 0)]];
+        let translation: fn(Mat4) -> [f32; 3] = |mat: Mat4| {
+            let vec = mat * Vec4::from([[0f32], [0f32], [0f32], [1f32]]);
+            [vec[(0, 0)], vec[(0, 1)], vec[(0, 2)]]
+        };
+        let direction: fn(Mat4) -> [f32; 3] = |mat: Mat4| {
+            let vec = mat * Vec4::from([[0f32], [0f32], [-1f32], [0f32]]);
+            [vec[(0, 0)], vec[(0, 0)], vec[(0, 0)]]
+        };
+        let att: fn(&dyn kernel::graphics::light_components::Attenuation) -> Attenuation = |l| {
+            let [[constant_component], [linear_component], [quadratic_component]] =
+                l.attenuation().as_ref().clone();
+            Attenuation {
+                constant_component,
+                linear_component,
+                quadratic_component,
+            }
+        };
+
+        DataWorld {
             num_dir_lights: dir_lights.len() as u32,
             num_point_lights: point_lights.len() as u32,
             num_spot_lights: spot_lights.len() as u32,
             ambient_light: AmbientLight {
-                color: color.clone().into(),
+                color: make_1d(ambient_light.color()),
             },
             dir_lights: partially_init_array(
                 |l| DirectionalLight {
-                    view_direction: (camera_body.position().to_matrix().transpose()
-                        * l.direction.fixed_resize::<4, 1>(0.0))
-                    .fixed_resize::<3, 1>(0.0)
-                    .into(),
-                    color: l.color.into(),
+                    view_direction: make_1d(l.direction()),
+                    color: make_1d(l.color()),
                     _dummy0: Default::default(),
                     _dummy1: Default::default(),
                 },
                 dir_lights,
             ),
             point_lights: partially_init_array(
-                |(light, body)| PointLight {
-                    view_position: camera_body
-                        .position()
-                        .inv_mul(body.position())
-                        .translation
-                        .into(),
-                    color: light.color.into(),
-                    attenuation: Attenuation {
-                        constant_component: light.attenuation.constant,
-                        linear_component: light.attenuation.linear,
-                        quadratic_component: light.attenuation.quadratic,
-                    },
+                |l| PointLight {
+                    view_position: translation(camera.view_matrix() * l.world_matrix()),
+                    color: make_1d(l.color()),
+                    attenuation: att(&l),
                     _dummy0: Default::default(),
                     _dummy1: Default::default(),
                     _dummy2: Default::default(),
@@ -215,33 +242,19 @@ pub fn make_world_fragment_uniforms(
                 point_lights,
             ),
             spot_lights: partially_init_array(
-                |(light, body)| SpotLight {
-                    opening_angle_rad: light.opening_angle,
-                    view_position: camera_body
-                        .position()
-                        .inv_mul(body.position())
-                        .translation
-                        .into(),
-                    view_direction: (camera_body
-                        .position()
-                        .inv_mul(body.position())
-                        .inverse()
-                        .to_matrix()
-                        .transpose()
-                        * Vector4::from([0.0, 0.0, -1.0, 0.0]))
-                    .fixed_resize::<3, 1>(0.0)
-                    .into(),
-                    color: light.color.into(),
-                    attenuation: Attenuation {
-                        constant_component: light.attenuation.constant,
-                        linear_component: light.attenuation.linear,
-                        quadratic_component: light.attenuation.quadratic,
-                    },
-                    _dummy0: Default::default(),
-                    _dummy1: Default::default(),
-                    _dummy2: Default::default(),
-                    _dummy3: Default::default(),
-                    _dummy4: Default::default(),
+                |l| {
+                    SpotLight {
+                        opening_angle_rad: l.opening_angle_rad(),
+                        view_position: translation(camera.view_matrix() * l.world_matrix()),
+                        view_direction: direction(camera.view_matrix() * l.world_matrix()), // THIS HAS TO BE NORMAL_MATRIX IN THE GENERAL CASE
+                        color: make_1d(l.color()),
+                        attenuation: att(&l),
+                        _dummy0: Default::default(),
+                        _dummy1: Default::default(),
+                        _dummy2: Default::default(),
+                        _dummy3: Default::default(),
+                        _dummy4: Default::default(),
+                    }
                 },
                 spot_lights,
             ),

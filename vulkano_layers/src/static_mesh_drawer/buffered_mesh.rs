@@ -10,10 +10,12 @@ use vulkano::{
     memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
 };
 
+#[derive(Clone)]
 pub struct BufferedMesh {
     pub vertices: Arc<CpuAccessibleBuffer<[Vertex]>>,
     pub indices: Arc<CpuAccessibleBuffer<[u32]>>,
     pub texture: Option<Arc<ImmutableImage<PotentialDedicatedAllocation<StdMemoryPoolAlloc>>>>,
+    pub index_count: u32,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -72,6 +74,7 @@ impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
                     Some(texture)
                 }
             },
+            index_count: indices.len() as u32,
         }
     }
 }

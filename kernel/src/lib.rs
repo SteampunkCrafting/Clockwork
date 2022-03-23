@@ -21,6 +21,7 @@ pub mod abstract_runtime {
     mod state;
 
     /* ---- PUBLIC ---- */
+    pub use ambassador::*;
     pub use event::*;
     pub use main_loop::*;
     pub use mechanism::*;
@@ -54,15 +55,18 @@ pub mod graphics {
     mod layer_key;
     /// A module, which defines the trait for the lights
     mod light;
+
+    /* ---- PUBLIC ---- */
+    pub mod light_components;
+    pub mod scene_object_components;
+
     /// A module, which contains a clockwork substate trait, which
     /// can act as a renderable collection, providing renderers
     /// with a camera, assets and instances, required for drawing.
-    mod scene;
-
-    /* ---- PUBLIC ---- */
+    pub mod scene;
     /// A module, which defines a trait of an abstract object of the scene,
     /// as well as some additional parts it contain.
-    mod scene_object;
+    pub mod scene_object;
     /// A module, which contains a `Vertex` trait
     pub mod vertex;
 
@@ -98,6 +102,7 @@ pub mod util {
     pub mod sync;
 
     /* ---- REEXPORTS ---- */
+    pub use ambassador;
     pub use derive_builder;
     pub use getset;
     pub use itertools;

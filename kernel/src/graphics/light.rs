@@ -1,53 +1,26 @@
-use crate::math::Vec3;
+use super::light_components::*;
+use super::SceneObject;
 
-/// A source of light, which illuminates from a point.
-pub trait PointLight {
-    /// Gets the light position
-    fn position(&self) -> Vec3;
-
-    /// Gets the light color
-    fn color(&self) -> Vec3;
-
-    /// Gets the light intensity
-    fn intensity(&self) -> f32;
-
-    /// Gets the light attenuation
-    fn attenuation(&self) -> Vec3;
-}
-
-/// A source of light, which illuminates from outside the scene.
-pub trait DirectionalLight {
-    /// Gets the light color
-    fn color(&self) -> Vec3;
-
-    /// Gets the light direction
-    fn direction(&self) -> Vec3;
-}
+/// An abstract source of light
+#[ambassador::delegatable_trait]
+pub trait Light: Color {}
 
 /// A source of light, which illuminates from within the space.
-pub trait AmbientLight {
-    /// Gets the ambient light color
-    fn color(&self) -> Vec3;
-}
+#[ambassador::delegatable_trait]
+pub trait AmbientLight: Light {}
 
-/// A source of light, which illuminates from within the space,
+/// A source of light, which illuminates from a point.
+#[ambassador::delegatable_trait]
+pub trait PointLight: SceneObject + Light + Intensity + Attenuation {}
+
+/// A source of light, which illuminates from outside the scene.
+#[ambassador::delegatable_trait]
+pub trait DirectionalLight: Light + Direction {}
+
+/// A source of light, which illuminates from within the point,
 /// and has some opening angle and direction.
-pub trait SpotLight {
-    /// Gets the light position
-    fn position(&self) -> Vec3;
-
-    /// Gets the light color
-    fn color(&self) -> Vec3;
-
-    /// Gets the light intensity
-    fn intensity(&self) -> f32;
-
-    /// Gets the light attenuation
-    fn attenuation(&self) -> Vec3;
-
-    /// Gets the light direction
-    fn direction(&self) -> Vec3;
-
-    /// Gets the opening angle of the light
-    fn opening_angle(&self) -> f32;
+#[ambassador::delegatable_trait]
+pub trait SpotLight:
+    SceneObject + OpeningAngle + Light + Intensity + Attenuation + Direction
+{
 }
