@@ -195,14 +195,13 @@ where
     let spot_lights = spot_lights.into_iter().collect_vec();
 
     unsafe {
-        let make_1d: fn(Vec3) -> [f32; 3] = |mat: Vec3| [mat[(0, 0)], mat[(1, 0)], mat[(2, 0)]];
         let translation: fn(Mat4) -> [f32; 3] = |mat: Mat4| {
-            let vec = mat * Vec4::from([[0f32], [0f32], [0f32], [1f32]]);
-            [vec[(0, 0)], vec[(0, 1)], vec[(0, 2)]]
+            let [x, y, z, _]: [f32; 4] = (mat * Vec4::from([0f32, 0f32, 0f32, 1f32])).into();
+            [x, y, z].into()
         };
         let direction: fn(Mat4) -> [f32; 3] = |mat: Mat4| {
-            let vec = mat * Vec4::from([[0f32], [0f32], [-1f32], [0f32]]);
-            [vec[(0, 0)], vec[(0, 0)], vec[(0, 0)]]
+            let [x, y, z, _]: [f32; 4] = (mat * Vec4::from([0f32, 0f32, -1f32, 0f32])).into();
+            [x, y, z].into()
         };
         let att: fn(&dyn kernel::graphics::light_components::Attenuation) -> Attenuation = |l| {
             let [[constant_component], [linear_component], [quadratic_component]] =
@@ -219,12 +218,12 @@ where
             num_point_lights: point_lights.len() as u32,
             num_spot_lights: spot_lights.len() as u32,
             ambient_light: AmbientLight {
-                color: make_1d(ambient_light.color()),
+                color: ambient_light.color().into(),
             },
             dir_lights: partially_init_array(
                 |l| DirectionalLight {
-                    view_direction: make_1d(l.direction()),
-                    color: make_1d(l.color()),
+                    view_direction: l.direction().into(),
+                    color: l.color().into(),
                     _dummy0: Default::default(),
                     _dummy1: Default::default(),
                 },
@@ -233,7 +232,7 @@ where
             point_lights: partially_init_array(
                 |l| PointLight {
                     view_position: translation(camera.view_matrix() * l.world_matrix()),
-                    color: make_1d(l.color()),
+                    color: l.color().into(),
                     attenuation: att(&l),
                     _dummy0: Default::default(),
                     _dummy1: Default::default(),
@@ -247,7 +246,7 @@ where
                         opening_angle_rad: l.opening_angle_rad(),
                         view_position: translation(camera.view_matrix() * l.world_matrix()),
                         view_direction: direction(camera.view_matrix() * l.world_matrix()), // THIS HAS TO BE NORMAL_MATRIX IN THE GENERAL CASE
-                        color: make_1d(l.color()),
+                        color: l.color().into(),
                         attenuation: att(&l),
                         _dummy0: Default::default(),
                         _dummy1: Default::default(),

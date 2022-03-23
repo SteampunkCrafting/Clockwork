@@ -20,35 +20,109 @@ use vulkano::{
     image::view::ImageView,
 };
 
-pub struct StaticMeshDrawer<L, I, S, SO, C, AL, DL, PL, SL>
-where
-    I: AssetStorageKey,
-    L: RenderingLayerKey,
+pub struct StaticMeshDrawer<
+    StateT,
+    SceneT,
+    AssetT,
+    LayerT,
+    InstanceT,
+    CameraT,
+    ALightT,
+    DLightT,
+    PLightT,
+    SLightT,
+> where
+    StateT: CallbackSubstate<SceneT>
+        + CallbackSubstate<TexturedMeshStorage<AssetT>>
+        + CallbackSubstate<PhongMaterialStorage<AssetT>>,
+    SceneT: Scene<LayerKey = LayerT>
+        + SceneObjects<InstanceT>
+        + PrimaryCamera<CameraT>
+        + Lights<ALightT, DLightT, PLightT, SLightT>,
+    InstanceT: SceneObject + Mesh<AssetT> + Material<AssetT>,
+    CameraT: Camera,
+    AssetT: AssetStorageKey,
+    LayerT: RenderingLayerKey,
+    ALightT: AmbientLight,
+    DLightT: DirectionalLight,
+    PLightT: PointLight,
+    SLightT: SpotLight,
 {
-    layer_id: L,
-    inner: InitState<(), InnerState<I>>,
-    _phantom_data: PhantomData<(S, SO, C, AL, DL, PL, SL)>,
+    layer_id: LayerT,
+    inner: InitState<(), InnerState<AssetT>>,
+    _phantom: PhantomData<(
+        StateT,
+        SceneT,
+        AssetT,
+        LayerT,
+        InstanceT,
+        CameraT,
+        ALightT,
+        DLightT,
+        PLightT,
+        SLightT,
+    )>,
 }
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct DrawMarker;
 
+impl<StateT, LayerT, AssetT, SceneT, InstanceT, CameraT, ALightT, DLightT, PLightT, SLightT>
+    StaticMeshDrawer<
+        StateT,
+        SceneT,
+        AssetT,
+        LayerT,
+        InstanceT,
+        CameraT,
+        ALightT,
+        DLightT,
+        PLightT,
+        SLightT,
+    >
+where
+    StateT: CallbackSubstate<SceneT>
+        + CallbackSubstate<TexturedMeshStorage<AssetT>>
+        + CallbackSubstate<PhongMaterialStorage<AssetT>>,
+    SceneT: Scene<LayerKey = LayerT>
+        + SceneObjects<InstanceT>
+        + PrimaryCamera<CameraT>
+        + Lights<ALightT, DLightT, PLightT, SLightT>,
+    InstanceT: SceneObject + Mesh<AssetT> + Material<AssetT>,
+    CameraT: Camera,
+    AssetT: AssetStorageKey,
+    LayerT: RenderingLayerKey,
+    ALightT: AmbientLight,
+    DLightT: DirectionalLight,
+    PLightT: PointLight,
+    SLightT: SpotLight,
+{
+    pub fn new(layer_id: LayerT) -> Self {
+        Self {
+            layer_id,
+            inner: Default::default(),
+            _phantom: Default::default(),
+        }
+    }
+}
+
 impl<
-        LayerID,
-        State,
-        AssetID,
-        SceneType,
+        StateT,
+        AssetT,
+        LayerT,
+        SceneT,
         InstanceType,
         CameraType,
         AmbientLightType,
         DirectionalLightType,
         PointLightType,
         SpotLightType,
-    > VulkanoLayer<State>
+    > VulkanoLayer<StateT>
     for StaticMeshDrawer<
-        LayerID,
-        AssetID,
-        SceneType,
+        StateT,
+        SceneT,
+        AssetT,
+        LayerT,
         InstanceType,
         CameraType,
         AmbientLightType,
@@ -57,17 +131,17 @@ impl<
         SpotLightType,
     >
 where
-    State: CallbackSubstate<SceneType>
-        + CallbackSubstate<TexturedMeshStorage<AssetID>>
-        + CallbackSubstate<PhongMaterialStorage<AssetID>>,
-    SceneType: Scene<LayerKey = LayerID>
+    StateT: CallbackSubstate<SceneT>
+        + CallbackSubstate<TexturedMeshStorage<AssetT>>
+        + CallbackSubstate<PhongMaterialStorage<AssetT>>,
+    SceneT: Scene<LayerKey = LayerT>
         + SceneObjects<InstanceType>
         + PrimaryCamera<CameraType>
         + Lights<AmbientLightType, DirectionalLightType, PointLightType, SpotLightType>,
-    InstanceType: SceneObject + Mesh<AssetID> + Material<AssetID>,
+    InstanceType: SceneObject + Mesh<AssetT> + Material<AssetT>,
     CameraType: Camera,
-    AssetID: AssetStorageKey,
-    LayerID: RenderingLayerKey,
+    AssetT: AssetStorageKey,
+    LayerT: RenderingLayerKey,
     AmbientLightType: AmbientLight,
     DirectionalLightType: DirectionalLight,
     PointLightType: PointLight,
@@ -75,7 +149,7 @@ where
 {
     fn draw(
         &mut self,
-        engine_state: &EngineState<State>,
+        engine_state: &EngineState<StateT>,
         graphics_state: &GraphicsState,
     ) -> vulkano::command_buffer::SecondaryAutoCommandBuffer {
         let Self {
@@ -99,7 +173,7 @@ where
 
         engine_state
             .start_access()
-            .get(|scene: &SceneType| {
+            .get(|scene: &SceneT| {
                 /* ---- GETTING SCENE INFO ---- */
                 let camera = scene.primary_camera(layer_id.clone());
                 let entities = scene.scene_objects(layer_id.clone());
@@ -295,15 +369,15 @@ where
             .finish()
     }
 
-    fn initialization(&mut self, _: &EngineState<State>, graphics_state: &GraphicsState) {
+    fn initialization(&mut self, _: &EngineState<StateT>, graphics_state: &GraphicsState) {
         self.inner.initialize(|_| graphics_state.into());
     }
 
-    fn window_resize(&mut self, _: &EngineState<State>, graphics_state: &GraphicsState) {
+    fn window_resize(&mut self, _: &EngineState<StateT>, graphics_state: &GraphicsState) {
         self.inner.get_init_mut().pipeline = generate_pipeline(graphics_state)
     }
 
-    fn termination(&mut self, _: &EngineState<State>, _: &GraphicsState) {}
+    fn termination(&mut self, _: &EngineState<StateT>, _: &GraphicsState) {}
 }
 
 mod buffered_mesh;

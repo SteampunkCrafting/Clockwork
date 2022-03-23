@@ -30,7 +30,7 @@ impl SceneObject for Body {
 
 #[derive(Delegate)]
 #[delegate(SceneObject, target = "body")]
-pub(super) struct SceneInstance<I: AssetStorageKey> {
+pub struct SceneInstance<I: AssetStorageKey> {
     asset_id: I,
     body: Body,
 }
@@ -59,7 +59,7 @@ impl<I: AssetStorageKey> Material<I> for SceneInstance<I> {
 #[derive(Delegate)]
 #[delegate(SceneObject, target = "body")]
 #[delegate(ProjectionMatrix, target = "camera")]
-pub(super) struct SceneCamera {
+pub struct SceneCamera {
     camera: scene::components::Camera,
     body: Body,
 }
@@ -77,7 +77,7 @@ impl Camera for SceneCamera {}
 #[delegate(AmbientLight)]
 #[delegate(Color)]
 #[delegate(Light)]
-pub(super) struct SceneAmbientLight {
+pub struct SceneAmbientLight {
     inner: scene::components::AmbientLight,
 }
 impl From<scene::components::AmbientLight> for SceneAmbientLight {
@@ -91,7 +91,7 @@ impl From<scene::components::AmbientLight> for SceneAmbientLight {
 #[delegate(Direction)]
 #[delegate(Color)]
 #[delegate(Light)]
-pub(super) struct SceneDirectionalLight {
+pub struct SceneDirectionalLight {
     inner: scene::components::DirectionalLight,
 }
 impl From<scene::components::DirectionalLight> for SceneDirectionalLight {
@@ -106,7 +106,7 @@ impl From<scene::components::DirectionalLight> for SceneDirectionalLight {
 #[delegate(Color, target = "inner")]
 #[delegate(Intensity, target = "inner")]
 #[delegate(Light, target = "inner")]
-pub(super) struct ScenePointLight {
+pub struct ScenePointLight {
     inner: scene::components::PointLight,
     body: Body,
 }
@@ -127,7 +127,7 @@ impl PointLight for ScenePointLight {}
 #[delegate(Intensity, target = "inner")]
 #[delegate(Light, target = "inner")]
 #[delegate(OpeningAngle, target = "inner")]
-pub(super) struct SceneSpotLight {
+pub struct SceneSpotLight {
     inner: scene::components::SpotLight,
     body: Body,
 }
