@@ -2,7 +2,7 @@ use self::inner_state::{generate_pipeline, InnerState};
 use asset_storage::asset_storage::AssetStorageKey;
 use graphics::{state::GraphicsState, vulkano_layer::VulkanoLayer};
 use kernel::{
-    abstract_runtime::{CallbackSubstate, EngineState},
+    abstract_runtime::{EngineState, Substate},
     graphics::{
         scene::{Lights, PrimaryCamera, SceneObjects},
         scene_object::{Camera, Material, Mesh},
@@ -32,9 +32,9 @@ pub struct StaticMeshDrawer<
     PLightT,
     SLightT,
 > where
-    StateT: CallbackSubstate<SceneT>
-        + CallbackSubstate<TexturedMeshStorage<AssetT>>
-        + CallbackSubstate<PhongMaterialStorage<AssetT>>,
+    StateT: Substate<SceneT>
+        + Substate<TexturedMeshStorage<AssetT>>
+        + Substate<PhongMaterialStorage<AssetT>>,
     SceneT: Scene<LayerKey = LayerT>
         + SceneObjects<InstanceT>
         + PrimaryCamera<CameraT>
@@ -81,9 +81,9 @@ impl<StateT, LayerT, AssetT, SceneT, InstanceT, CameraT, ALightT, DLightT, PLigh
         SLightT,
     >
 where
-    StateT: CallbackSubstate<SceneT>
-        + CallbackSubstate<TexturedMeshStorage<AssetT>>
-        + CallbackSubstate<PhongMaterialStorage<AssetT>>,
+    StateT: Substate<SceneT>
+        + Substate<TexturedMeshStorage<AssetT>>
+        + Substate<PhongMaterialStorage<AssetT>>,
     SceneT: Scene<LayerKey = LayerT>
         + SceneObjects<InstanceT>
         + PrimaryCamera<CameraT>
@@ -131,9 +131,9 @@ impl<
         SpotLightType,
     >
 where
-    StateT: CallbackSubstate<SceneT>
-        + CallbackSubstate<TexturedMeshStorage<AssetT>>
-        + CallbackSubstate<PhongMaterialStorage<AssetT>>,
+    StateT: Substate<SceneT>
+        + Substate<TexturedMeshStorage<AssetT>>
+        + Substate<PhongMaterialStorage<AssetT>>,
     SceneT: Scene<LayerKey = LayerT>
         + SceneObjects<InstanceType>
         + PrimaryCamera<CameraType>

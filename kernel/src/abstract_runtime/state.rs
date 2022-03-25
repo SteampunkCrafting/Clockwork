@@ -112,9 +112,9 @@ where
 /// Note: this chaining of states may produce a lot of unnecessary code due
 /// to lots of trait delegations. In the future, this should be overcome by
 /// providing macros.
-pub trait Substate<S>
+pub trait FieldSubstate<S>
 where
-    Self: CallbackSubstate<S> + ClockworkState,
+    Self: Substate<S> + ClockworkState,
     S: ClockworkState + ?Sized,
 {
     /// Gets an immutable reference to the substate
@@ -122,7 +122,7 @@ where
     /// Gets a mutable reference to the substate
     fn substate_mut(&mut self) -> &mut S;
 }
-impl<S> Substate<S> for S
+impl<S> FieldSubstate<S> for S
 where
     S: ClockworkState,
 {
@@ -140,31 +140,31 @@ where
 /// This is a more general type trait, which should be requested by
 /// mechanisms.
 #[delegatable_trait]
-pub trait CallbackSubstate<S>
+pub trait Substate<S>
 where
     Self: ClockworkState,
     S: ClockworkState + ?Sized,
 {
     /// Executes provided callback, supplying its substate reference
-    fn callback_substate<R>(&self, callback: impl FnOnce(&S) -> R) -> R;
+    fn substate<R>(&self, callback: impl FnOnce(&S) -> R) -> R;
     /// Executes provided callback, supplying its mutable substate reference
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut S) -> R) -> R;
+    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut S) -> R) -> R;
 }
 
 /// Having substate always implies a possibility
 /// to execute a callback on this substate.
 /// This is not always true the other way.
-impl<T, S> CallbackSubstate<S> for T
+impl<T, S> Substate<S> for T
 where
-    T: Substate<S>,
+    T: FieldSubstate<S>,
     S: ClockworkState + ?Sized,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&S) -> R) -> R {
-        callback(self.substate())
+    fn substate<R>(&self, callback: impl FnOnce(&S) -> R) -> R {
+        callback(FieldSubstate::substate(self))
     }
 
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut S) -> R) -> R {
-        callback(self.substate_mut())
+    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut S) -> R) -> R {
+        callback(FieldSubstate::substate_mut(self))
     }
 }
 
@@ -228,11 +228,11 @@ where
     pub fn get<T, U>(self, callback: impl FnOnce(&T) -> U) -> ReadCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, .. } = self;
         ReadCallbackGuard {
-            result: state.0.callback_substate(|state| callback(state)),
+            result: state.0.substate(|state| callback(state)),
             state,
         }
     }
@@ -252,13 +252,11 @@ where
     pub fn then_get<T, U>(self, callback: impl FnOnce(R, &T) -> U) -> ReadCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, result } = self;
         ReadCallbackGuard {
-            result: state
-                .0
-                .callback_substate(move |state| callback(result, state)),
+            result: state.0.substate(move |state| callback(result, state)),
             state,
         }
     }
@@ -271,11 +269,11 @@ where
     ) -> ReadCallbackGuard<'a, S, (R, U)>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, result } = self;
         ReadCallbackGuard {
-            result: (result, state.0.callback_substate(callback)),
+            result: (result, state.0.substate(callback)),
             state,
         }
     }
@@ -301,11 +299,11 @@ where
     pub fn get<T, U>(self, callback: impl FnOnce(&T) -> U) -> WriteCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, .. } = self;
         WriteCallbackGuard {
-            result: state.0.callback_substate(|state| callback(state)),
+            result: state.0.substate(|state| callback(state)),
             state,
         }
     }
@@ -317,11 +315,11 @@ where
     pub fn get_mut<T, U>(self, callback: impl FnOnce(&mut T) -> U) -> WriteCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, .. } = self;
         WriteCallbackGuard {
-            result: state.0.callback_substate_mut(|state| callback(state)),
+            result: state.0.substate_mut(|state| callback(state)),
             state,
         }
     }
@@ -341,13 +339,11 @@ where
     pub fn then_get<T, U>(self, callback: impl FnOnce(R, &T) -> U) -> WriteCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, result } = self;
         WriteCallbackGuard {
-            result: state
-                .0
-                .callback_substate(move |state| callback(result, state)),
+            result: state.0.substate(move |state| callback(result, state)),
             state,
         }
     }
@@ -360,11 +356,11 @@ where
     ) -> WriteCallbackGuard<'a, S, (R, U)>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, result } = self;
         WriteCallbackGuard {
-            result: (result, state.0.callback_substate(callback)),
+            result: (result, state.0.substate(callback)),
             state,
         }
     }
@@ -377,13 +373,11 @@ where
     ) -> WriteCallbackGuard<'a, S, U>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, result } = self;
         WriteCallbackGuard {
-            result: state
-                .0
-                .callback_substate_mut(move |state| callback(result, state)),
+            result: state.0.substate_mut(move |state| callback(result, state)),
             state,
         }
     }
@@ -396,11 +390,11 @@ where
     ) -> WriteCallbackGuard<'a, S, (R, U)>
     where
         T: ClockworkState,
-        S: CallbackSubstate<T>,
+        S: Substate<T>,
     {
         let Self { state, result } = self;
         WriteCallbackGuard {
-            result: (result, state.0.callback_substate_mut(callback)),
+            result: (result, state.0.substate_mut(callback)),
             state,
         }
     }

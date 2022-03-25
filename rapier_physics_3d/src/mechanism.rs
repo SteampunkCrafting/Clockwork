@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::state::PhysicsState;
 use kernel::{
-    abstract_runtime::{CallbackSubstate, EngineState},
+    abstract_runtime::{EngineState, Substate},
     prelude::StandardEvent,
     standard_runtime::{StandardMechanism, StandardRuntimeStatistics},
     util::derive_builder::Builder,
@@ -39,7 +39,7 @@ where
 
 impl<S, T> StandardMechanism<S> for Rapier3DTicker<T>
 where
-    S: CallbackSubstate<PhysicsState> + CallbackSubstate<T>,
+    S: Substate<PhysicsState> + Substate<T>,
     T: StandardRuntimeStatistics,
 {
     fn tick(&mut self, state: &mut EngineState<S>) {

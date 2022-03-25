@@ -3,7 +3,7 @@ use derive_builder::Builder;
 use ecs::prelude::LegionState;
 use graphics::state::GuiState;
 use kernel::{
-    abstract_runtime::{CallbackSubstate, ClockworkState, Substate},
+    abstract_runtime::{ClockworkState, FieldSubstate, Substate},
     prelude::StandardEvent,
 };
 use main_loop::state::{InitWinitState, InputState, MainLoopStatistics};
@@ -95,11 +95,11 @@ where
     }
 }
 
-impl<C> CallbackSubstate<MainLoopStatistics> for BaseState<C>
+impl<C> Substate<MainLoopStatistics> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&MainLoopStatistics) -> R) -> R {
+    fn substate<R>(&self, callback: impl FnOnce(&MainLoopStatistics) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -107,10 +107,7 @@ where
         callback(&resources.get().unwrap())
     }
 
-    fn callback_substate_mut<R>(
-        &mut self,
-        callback: impl FnOnce(&mut MainLoopStatistics) -> R,
-    ) -> R {
+    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut MainLoopStatistics) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -119,11 +116,11 @@ where
     }
 }
 
-impl<C> CallbackSubstate<InputState> for BaseState<C>
+impl<C> Substate<InputState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&InputState) -> R) -> R {
+    fn substate<R>(&self, callback: impl FnOnce(&InputState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -131,7 +128,7 @@ where
         callback(&resources.get().unwrap())
     }
 
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut InputState) -> R) -> R {
+    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut InputState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -140,11 +137,11 @@ where
     }
 }
 
-impl<C> CallbackSubstate<PhysicsState> for BaseState<C>
+impl<C> Substate<PhysicsState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&PhysicsState) -> R) -> R {
+    fn substate<R>(&self, callback: impl FnOnce(&PhysicsState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -152,7 +149,7 @@ where
         callback(&resources.get().unwrap())
     }
 
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut PhysicsState) -> R) -> R {
+    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut PhysicsState) -> R) -> R {
         let Self {
             ecs: LegionState { resources, .. },
             ..
@@ -161,7 +158,7 @@ where
     }
 }
 
-impl<C> Substate<LegionState> for BaseState<C>
+impl<C> FieldSubstate<LegionState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
@@ -174,7 +171,7 @@ where
     }
 }
 
-impl<C> Substate<ColoredMeshStorage<C>> for BaseState<C>
+impl<C> FieldSubstate<ColoredMeshStorage<C>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
@@ -187,7 +184,7 @@ where
     }
 }
 
-impl<C> Substate<TexturedMeshStorage<C>> for BaseState<C>
+impl<C> FieldSubstate<TexturedMeshStorage<C>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
@@ -200,7 +197,7 @@ where
     }
 }
 
-impl<C> Substate<InitWinitState<StandardEvent>> for BaseState<C>
+impl<C> FieldSubstate<InitWinitState<StandardEvent>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
@@ -213,7 +210,7 @@ where
     }
 }
 
-impl<C> Substate<PhongMaterialStorage<C>> for BaseState<C>
+impl<C> FieldSubstate<PhongMaterialStorage<C>> for BaseState<C>
 where
     C: AssetStorageKey,
 {
@@ -226,15 +223,15 @@ where
     }
 }
 
-impl<C> CallbackSubstate<GuiState> for BaseState<C>
+impl<C> Substate<GuiState> for BaseState<C>
 where
     C: AssetStorageKey,
 {
-    fn callback_substate<R>(&self, callback: impl FnOnce(&GuiState) -> R) -> R {
+    fn substate<R>(&self, callback: impl FnOnce(&GuiState) -> R) -> R {
         callback(&self.ecs.resources.get().unwrap())
     }
 
-    fn callback_substate_mut<R>(&mut self, callback: impl FnOnce(&mut GuiState) -> R) -> R {
+    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut GuiState) -> R) -> R {
         callback(&mut self.ecs.resources.get_mut().unwrap())
     }
 }

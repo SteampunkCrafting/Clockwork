@@ -1,6 +1,6 @@
 use crate::state::InitWinitState;
 use crate::state::{InputState, MainLoopStatistics};
-use kernel::abstract_runtime::{CallbackSubstate, EngineState, Mechanisms};
+use kernel::abstract_runtime::{EngineState, Mechanisms, Substate};
 use kernel::prelude::*;
 use kernel::standard_runtime::StandardEventSuperset;
 use std::convert::TryInto;
@@ -12,9 +12,7 @@ use winit::{
 
 pub fn main_loop<S, E>(mut state: EngineState<S>, mut mechanisms: Mechanisms<S, E>)
 where
-    S: CallbackSubstate<MainLoopStatistics>
-        + CallbackSubstate<InitWinitState<E>>
-        + CallbackSubstate<InputState>,
+    S: Substate<MainLoopStatistics> + Substate<InitWinitState<E>> + Substate<InputState>,
     E: StandardEventSuperset,
 {
     /* -- INITIALIZING MECHANISMS -- */

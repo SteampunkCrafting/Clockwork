@@ -6,7 +6,7 @@ use kernel::util::init_state::InitState;
 use kernel::util::log::{debug, info, trace};
 use kernel::util::sync::WriteLock;
 use kernel::{
-    abstract_runtime::{CallbackSubstate, ClockworkState},
+    abstract_runtime::{ClockworkState, Substate},
     standard_runtime::StandardEventSuperset,
 };
 use main_loop::{prelude::Window, state::InitWinitState};
@@ -107,13 +107,13 @@ impl Default for GuiState {
 
 pub trait StateRequirements<E>
 where
-    Self: CallbackSubstate<InitWinitState<E>> + CallbackSubstate<GuiState> + ClockworkState,
+    Self: Substate<InitWinitState<E>> + Substate<GuiState> + ClockworkState,
     E: StandardEventSuperset,
 {
 }
 impl<T, E> StateRequirements<E> for T
 where
-    T: CallbackSubstate<InitWinitState<E>> + CallbackSubstate<GuiState> + ClockworkState,
+    T: Substate<InitWinitState<E>> + Substate<GuiState> + ClockworkState,
     E: StandardEventSuperset,
 {
 }

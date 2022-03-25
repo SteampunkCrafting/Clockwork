@@ -1,5 +1,5 @@
 use crate::state::LegionState;
-use kernel::abstract_runtime::{CallbackSubstate, ClockworkEvent, EngineState, Mechanism};
+use kernel::abstract_runtime::{ClockworkEvent, EngineState, Mechanism, Substate};
 pub use legion::system;
 use legion::{
     systems::{self, ParallelRunnable},
@@ -85,7 +85,7 @@ where
 
 impl<S, E> Mechanism<S, E> for LegionSystems<E>
 where
-    S: CallbackSubstate<LegionState>,
+    S: Substate<LegionState>,
     E: ClockworkEvent,
 {
     fn clink(&mut self, state: &mut EngineState<S>, event: E) {
