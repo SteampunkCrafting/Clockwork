@@ -1,11 +1,11 @@
 use crate::fields;
 use kernel::abstract_runtime::Delegate;
-use kernel::ambassador_impl_Attenuation_body_single_struct;
-use kernel::ambassador_impl_Color_body_single_struct;
 use kernel::graphics::light_components::Intensity;
 use kernel::graphics::light_components::OpeningAngle;
 use kernel::graphics::light_components::{Attenuation, Color};
+use kernel::graphics::Light;
 use kernel::math::Vec3;
+use kernel::*;
 use physics::prelude::nalgebra::UnitVector3;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Delegate)]
@@ -53,6 +53,8 @@ pub struct SpotLight {
     pub color: fields::Color,
     pub attenuation: fields::Attenuation,
 }
+
+impl Light for SpotLight {}
 
 impl Intensity for SpotLight {
     fn intensity(&self) -> f32 {

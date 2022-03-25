@@ -10,19 +10,12 @@ use main_loop::state::{InitWinitState, InputState, MainLoopStatistics};
 use physics::state::PhysicsState;
 use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 
+pub use assets_wrapper::Assets;
+
+mod assets_wrapper;
+mod legion_rapier_wrapper;
 mod scene_impls;
 mod scene_instance;
-
-#[derive(Builder)]
-#[builder(pattern = "owned", setter(into, prefix = "with"))]
-pub struct Assets<C>
-where
-    C: AssetStorageKey,
-{
-    pub colored_meshes: ColoredMeshStorage<C>,
-    pub static_meshes: TexturedMeshStorage<C>,
-    pub materials: PhongMaterialStorage<C>,
-}
 
 #[derive(Builder)]
 #[builder(pattern = "owned", setter(into, prefix = "with"), build_fn(skip))]
@@ -40,15 +33,6 @@ where
 }
 
 impl<C> ClockworkState for BaseState<C> where C: AssetStorageKey {}
-
-impl<C> Assets<C>
-where
-    C: AssetStorageKey,
-{
-    pub fn builder() -> AssetsBuilder<C> {
-        Default::default()
-    }
-}
 
 impl<C> BaseState<C>
 where

@@ -5,10 +5,16 @@ authors = ["Yaroslav V. Petrov <yaroslav.v.petrov@yandex.ru>"]
 edition = "2018"
 
 [dependencies]
-serde = {version="1.0.136", features = ["derive"]}
 log = "0.4.14"
 itertools = "0.10.0"
 no_deadlocks = "1.2.0"
 derive_builder = "0.10.2"
 getset = "0.1.1"
-ambassador = "0.2.1"
+
+[dependencies.ambassador]
+git = "https://github.com/SteampunkCrafting/ambassador.git"
+rev = "c96ac3c155a9641258b778169997c0e4fb37495d"
+
+[dependencies.serde]
+version="1.0.136" 
+features = ["derive"]
