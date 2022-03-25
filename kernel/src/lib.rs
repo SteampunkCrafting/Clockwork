@@ -4,6 +4,7 @@ pub mod prelude {
     pub use crate::standard_runtime::StandardEvent;
     pub use crate::util::itertools::*;
     pub use crate::util::log::*;
+    pub use crate::util::serde::*;
 }
 
 /* ---- MODULES ---- */
@@ -107,4 +108,5 @@ pub mod util {
     pub use getset;
     pub use itertools;
     pub use log;
+    pub use serde;
 }

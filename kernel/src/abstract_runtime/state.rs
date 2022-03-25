@@ -1,3 +1,5 @@
+use ambassador::delegatable_trait;
+
 /// A set of constraints, which every valid Clockwork state should satisfy.
 ///
 /// This trait is implemented automatically on every type, which
@@ -137,6 +139,7 @@ where
 ///
 /// This is a more general type trait, which should be requested by
 /// mechanisms.
+#[delegatable_trait]
 pub trait CallbackSubstate<S>
 where
     Self: ClockworkState,
