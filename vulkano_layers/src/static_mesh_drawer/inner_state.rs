@@ -2,14 +2,10 @@ use asset_storage::asset_storage::AssetStorageKey;
 use graphics::state::GraphicsState;
 use kernel::{
     graphics::{scene_object::Camera, AmbientLight, DirectionalLight, PointLight, SpotLight},
-    math::{Mat4, Vec3, Vec4},
+    math::{Mat4, Vec4},
     prelude::Itertools,
 };
 use scene_utils::components::PhongMaterial;
-// use physics::prelude::{nalgebra::Vector4, RigidBody};
-// use scene_utils::components::{
-//     AmbientLight, Camera, DirectionalLight, PhongMaterial, PointLight, SpotLight,
-// };
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuBufferPool},
