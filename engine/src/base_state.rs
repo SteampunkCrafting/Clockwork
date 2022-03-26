@@ -1,221 +1,109 @@
+use crate::base_state::scene::Iter;
+use crate::base_state::scene::PrimaryCamera;
+use crate::base_state::scene::SceneObjects;
+use crate::base_state::scene_instance::SceneCamera;
+use crate::base_state::scene_instance::SceneInstance;
+use ::graphics::state::GuiState;
+use ::scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
 use asset_storage::asset_storage::AssetStorageKey;
 use derive_builder::Builder;
 use ecs::prelude::LegionState;
-use graphics::state::GuiState;
+use kernel::graphics::scene::Lights;
+use kernel::*;
 use kernel::{
-    abstract_runtime::{ClockworkState, FieldSubstate, Substate},
+    abstract_runtime::{ClockworkState, Delegate, Substate},
+    graphics::*,
     prelude::StandardEvent,
 };
 use main_loop::state::{InitWinitState, InputState, MainLoopStatistics};
-use physics::state::PhysicsState;
-use scene::prelude::{ColoredMeshStorage, PhongMaterialStorage, TexturedMeshStorage};
+use physics::prelude::PhysicsState;
 
 pub use assets_wrapper::Assets;
+use legion_rapier_wrapper::ECSWrapper;
 
+use self::scene_instance::SceneAmbientLight;
+use self::scene_instance::SceneDirectionalLight;
+use self::scene_instance::ScenePointLight;
+use self::scene_instance::SceneSpotLight;
 mod assets_wrapper;
 mod legion_rapier_wrapper;
-mod scene_impls;
 mod scene_instance;
 
-#[derive(Builder)]
+#[derive(Builder, Delegate)]
+#[delegate(Substate<ColoredMeshStorage<AssetT>>, target = "assets")]
+#[delegate(Substate<TexturedMeshStorage<AssetT>>, target = "assets")]
+#[delegate(Substate<PhongMaterialStorage<AssetT>>, target = "assets")]
+#[delegate(Substate<LegionState>, target = "ecs")]
+#[delegate(Substate<GuiState>, target="ecs")]
+#[delegate(Substate<MainLoopStatistics>, target = "ecs")]
+#[delegate(Substate<InputState>, target = "ecs")]
+#[delegate(Substate<PhysicsState>, target = "ecs")]
+// #[delegate(Scene<LayerKey = u32>, target = "ecs")]
+#[delegate(SceneObjects<SceneInstance<AssetT>>, target = "ecs")]
+#[delegate(PrimaryCamera<SceneCamera>, target = "ecs")]
+// #[delegate(Lights<SceneAmbientLight, SceneDirectionalLight, ScenePointLight, SceneSpotLight>, target = "ecs")]
+#[delegate(Substate<InitWinitState<StandardEvent>>, target = "main_loop_state")]
 #[builder(pattern = "owned", setter(into, prefix = "with"), build_fn(skip))]
-pub struct BaseState<C>
+pub struct BaseState<AssetT>
 where
-    C: AssetStorageKey,
+    AssetT: AssetStorageKey,
 {
     #[builder(setter(skip))]
-    ecs: LegionState,
+    ecs: ECSWrapper,
 
     #[builder(setter(skip))]
     main_loop_state: InitWinitState<StandardEvent>,
 
-    assets: Assets<C>,
+    assets: Assets<AssetT>,
 }
 
-impl<C> ClockworkState for BaseState<C> where C: AssetStorageKey {}
+impl<T: AssetStorageKey> Scene for BaseState<T> {
+    type LayerKey = u32;
+}
 
-impl<C> BaseState<C>
+impl<AssetT> ClockworkState for BaseState<AssetT> where AssetT: AssetStorageKey {}
+
+impl<AssetT> BaseState<AssetT>
 where
-    C: AssetStorageKey,
+    AssetT: AssetStorageKey,
 {
-    pub fn builder() -> BaseStateBuilder<C> {
+    pub fn builder() -> BaseStateBuilder<AssetT> {
         Default::default()
     }
 }
 
-impl<C> BaseStateBuilder<C>
+impl<AssetT> BaseStateBuilder<AssetT>
 where
-    C: AssetStorageKey,
+    AssetT: AssetStorageKey,
 {
-    pub fn build(self) -> Result<BaseState<C>, String> {
-        /* ---- ALLOCATING MEMORY ---- */
+    pub fn build(self) -> Result<BaseState<AssetT>, String> {
         let Self { assets, .. } = self;
-        let mut base_state = BaseState {
-            ecs: LegionState::builder().build().unwrap(),
-            assets: assets.ok_or("Missing assets")?,
-            main_loop_state: InitWinitState::builder().build().unwrap(),
-        };
-        let BaseState {
-            ecs: LegionState { resources, .. },
+        let main_loop_state = InitWinitState::builder().build().unwrap();
+        Ok(BaseState {
+            ecs: ECSWrapper::new(main_loop_state.proxy().clone()),
             main_loop_state,
-            ..
-        } = &mut base_state;
-
-        /* ---- INITIALIZING MAIN LOOP ---- */
-        resources.insert(main_loop_state.proxy().clone());
-
-        /* ---- INITIALIZING PHYSICS ---- */
-        resources.insert(PhysicsState::builder().build().unwrap());
-
-        /* ---- INITIALIZING IO ---- */
-        resources.insert(InputState::builder().build().unwrap());
-        resources.insert(MainLoopStatistics::builder().build().unwrap());
-
-        /* ---- INITIALIZING GUI ---- */
-        resources.insert(GuiState::default());
-
-        /* ---- RETURNING ---- */
-        Ok(base_state)
+            assets: assets.ok_or("Missing assets")?,
+        })
     }
 }
 
-impl<C> Substate<MainLoopStatistics> for BaseState<C>
-where
-    C: AssetStorageKey,
+impl<AssetT: AssetStorageKey>
+    Lights<SceneAmbientLight, SceneDirectionalLight, ScenePointLight, SceneSpotLight>
+    for BaseState<AssetT>
 {
-    fn substate<R>(&self, callback: impl FnOnce(&MainLoopStatistics) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&resources.get().unwrap())
+    fn ambient_light(&self, layer_key: Self::LayerKey) -> SceneAmbientLight {
+        self.ecs.ambient_light(layer_key)
     }
 
-    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut MainLoopStatistics) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&mut resources.get_mut().unwrap())
-    }
-}
-
-impl<C> Substate<InputState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate<R>(&self, callback: impl FnOnce(&InputState) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&resources.get().unwrap())
+    fn directional_lights(&self, layer_key: Self::LayerKey) -> Iter<SceneDirectionalLight> {
+        self.ecs.directional_lights(layer_key)
     }
 
-    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut InputState) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&mut resources.get_mut().unwrap())
-    }
-}
-
-impl<C> Substate<PhysicsState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate<R>(&self, callback: impl FnOnce(&PhysicsState) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&resources.get().unwrap())
+    fn point_lights(&self, layer_key: Self::LayerKey) -> Iter<ScenePointLight> {
+        self.ecs.point_lights(layer_key)
     }
 
-    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut PhysicsState) -> R) -> R {
-        let Self {
-            ecs: LegionState { resources, .. },
-            ..
-        } = self;
-        callback(&mut resources.get_mut().unwrap())
-    }
-}
-
-impl<C> FieldSubstate<LegionState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &LegionState {
-        &self.ecs
-    }
-
-    fn substate_mut(&mut self) -> &mut LegionState {
-        &mut self.ecs
-    }
-}
-
-impl<C> FieldSubstate<ColoredMeshStorage<C>> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &ColoredMeshStorage<C> {
-        &self.assets.colored_meshes
-    }
-
-    fn substate_mut(&mut self) -> &mut ColoredMeshStorage<C> {
-        &mut self.assets.colored_meshes
-    }
-}
-
-impl<C> FieldSubstate<TexturedMeshStorage<C>> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &TexturedMeshStorage<C> {
-        &self.assets.static_meshes
-    }
-
-    fn substate_mut(&mut self) -> &mut TexturedMeshStorage<C> {
-        &mut self.assets.static_meshes
-    }
-}
-
-impl<C> FieldSubstate<InitWinitState<StandardEvent>> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &InitWinitState<StandardEvent> {
-        &self.main_loop_state
-    }
-
-    fn substate_mut(&mut self) -> &mut InitWinitState<StandardEvent> {
-        &mut self.main_loop_state
-    }
-}
-
-impl<C> FieldSubstate<PhongMaterialStorage<C>> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate(&self) -> &PhongMaterialStorage<C> {
-        &self.assets.materials
-    }
-
-    fn substate_mut(&mut self) -> &mut PhongMaterialStorage<C> {
-        &mut self.assets.materials
-    }
-}
-
-impl<C> Substate<GuiState> for BaseState<C>
-where
-    C: AssetStorageKey,
-{
-    fn substate<R>(&self, callback: impl FnOnce(&GuiState) -> R) -> R {
-        callback(&self.ecs.resources.get().unwrap())
-    }
-
-    fn substate_mut<R>(&mut self, callback: impl FnOnce(&mut GuiState) -> R) -> R {
-        callback(&mut self.ecs.resources.get_mut().unwrap())
+    fn spot_lights(&self, layer_key: Self::LayerKey) -> Iter<SceneSpotLight> {
+        self.ecs.spot_lights(layer_key)
     }
 }

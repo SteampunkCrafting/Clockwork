@@ -1,3 +1,5 @@
+use ambassador::delegatable_trait;
+
 use crate::abstract_runtime::ClockworkState;
 
 use super::{
@@ -9,6 +11,7 @@ use super::{
 pub type Iter<T> = Box<dyn Iterator<Item = T>>;
 
 /// A trait for the collection of objects on the scene
+#[delegatable_trait]
 pub trait Scene
 where
     Self: ClockworkState,
@@ -20,6 +23,7 @@ where
 }
 
 /// A trait of Scene with SceneObjects of a certain type
+#[delegatable_trait]
 pub trait SceneObjects<T>
 where
     Self: Scene,
@@ -35,6 +39,7 @@ where
 /// In the case, when there is more than one camera,
 /// it is up to the scene to decide, which camera
 /// is provided.
+#[delegatable_trait]
 pub trait PrimaryCamera<T>
 where
     Self: Scene,
@@ -45,6 +50,7 @@ where
 }
 
 /// A trait of Scene with all types of lights
+#[delegatable_trait]
 pub trait Lights<A, D, P, S>
 where
     Self: Scene,

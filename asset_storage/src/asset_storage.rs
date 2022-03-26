@@ -1,7 +1,8 @@
 use kernel::{abstract_runtime::ClockworkState, util::sync::ReadLock};
+use std::fmt::Debug;
 use std::{cell::RefCell, collections::HashMap, hash::Hash};
 
-pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
+pub trait AssetStorageKey: Send + Sync + Sized + Clone + Hash + Eq + Debug + 'static {}
 
 pub struct AssetStorage<T, U>(Box<dyn Send + Fn(T) -> U>, RefCell<HashMap<T, ReadLock<U>>>)
 where
@@ -14,7 +15,7 @@ where
 {
 }
 
-impl<T> AssetStorageKey for T where T: Send + Sync + Sized + Clone + Hash + Eq + 'static {}
+impl<T> AssetStorageKey for T where T: Send + Sync + Sized + Clone + Hash + Eq + Debug + 'static {}
 
 impl<T, U> AssetStorage<T, U>
 where
