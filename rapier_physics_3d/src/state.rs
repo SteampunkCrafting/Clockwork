@@ -1,4 +1,8 @@
-use kernel::{abstract_runtime::ClockworkState, util::derive_builder::Builder};
+use kernel::{
+    abstract_runtime::ClockworkState,
+    prelude::{Deserialize, Serialize},
+    util::derive_builder::Builder,
+};
 use rapier3d::{
     dynamics::{CCDSolver, JointSet, RigidBodySet},
     geometry::{BroadPhase, ColliderSet, NarrowPhase},
@@ -6,7 +10,7 @@ use rapier3d::{
     prelude::IslandManager,
 };
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct Gravity(pub Vector<f32>);
 
 /// A physics simulation state.
@@ -14,7 +18,7 @@ pub struct Gravity(pub Vector<f32>);
 /// Represents a world with static/kinematic/dynamic
 /// bodies/colliders/joints, which exist in the same
 /// space.
-#[derive(Builder)]
+#[derive(Builder, Serialize, Deserialize)]
 #[builder(pattern = "owned")]
 pub struct PhysicsState {
     /// A gravity vector.
