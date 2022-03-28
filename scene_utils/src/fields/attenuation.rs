@@ -1,9 +1,11 @@
+use serde::{Deserialize, Serialize};
+
 /// Attenuation is a factor of light intensity decay over distance,
 /// which contains constant, linear, and quadratic components.
 ///
 /// Default attenuation is 1.0 for constant, and 0.0 for other parts,
 /// meaning that the light will not decay over distance.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Attenuation {
     pub constant: f32,
     pub linear: f32,

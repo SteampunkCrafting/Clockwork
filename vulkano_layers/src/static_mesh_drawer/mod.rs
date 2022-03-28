@@ -9,9 +9,11 @@ use kernel::{
         AmbientLight, DirectionalLight, PointLight, RenderingLayerKey, Scene, SceneObject,
         SpotLight,
     },
+    prelude::Serialize,
     util::init_state::InitState,
 };
 use scene_utils::prelude::{PhongMaterialStorage, TexturedMeshStorage};
+use serde::Deserialize;
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
@@ -64,7 +66,7 @@ pub struct StaticMeshDrawer<
     )>,
 }
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DrawMarker;
 
 impl<StateT, LayerT, AssetT, SceneT, InstanceT, CameraT, ALightT, DLightT, PLightT, SLightT>

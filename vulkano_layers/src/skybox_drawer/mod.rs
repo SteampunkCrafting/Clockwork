@@ -11,6 +11,7 @@ use scene_utils::{
     components::{AmbientLight, Camera},
     prelude::{PhongMaterialStorage, TexturedMeshStorage},
 };
+use serde::{Deserialize, Serialize};
 use state_requirements::StateRequirements;
 use std::{collections::HashMap, sync::Arc};
 use vulkano::{
@@ -25,6 +26,7 @@ pub struct SkyboxDrawer<I>(InitState<(), InnerState<I>>)
 where
     I: AssetStorageKey;
 
+#[derive(Serialize, Deserialize)]
 pub struct DrawMarker;
 
 impl<S, I> VulkanoLayer<S> for SkyboxDrawer<I>

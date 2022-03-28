@@ -1,7 +1,8 @@
 use kernel::{graphics::scene_object_components::ProjectionMatrix, math::Mat4};
 use physics::prelude::nalgebra::{Matrix4, Orthographic3, Perspective3};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Camera {
     Perspective(Perspective3<f32>),
     Orthographic(Orthographic3<f32>),

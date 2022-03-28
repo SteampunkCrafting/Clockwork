@@ -1,7 +1,8 @@
 use kernel::math::{Vec3, Vec4};
+use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
 
-#[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Color {
     red: u8,
     green: u8,

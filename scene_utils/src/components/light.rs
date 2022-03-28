@@ -5,10 +5,12 @@ use kernel::graphics::light_components::OpeningAngle;
 use kernel::graphics::light_components::{Attenuation, Color};
 use kernel::graphics::Light;
 use kernel::math::Vec3;
+use kernel::prelude::Deserialize;
+use kernel::prelude::Serialize;
 use kernel::*;
 use physics::prelude::nalgebra::UnitVector3;
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Delegate)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Delegate, Serialize, Deserialize)]
 #[delegate(Color)]
 pub struct AmbientLight {
     pub color: fields::Color,
@@ -16,7 +18,7 @@ pub struct AmbientLight {
 impl kernel::graphics::Light for AmbientLight {}
 impl kernel::graphics::AmbientLight for AmbientLight {}
 
-#[derive(Debug, Clone, Copy, Delegate)]
+#[derive(Debug, Clone, Copy, Delegate, Serialize, Deserialize)]
 #[delegate(Color, target = "color")]
 pub struct DirectionalLight {
     pub color: fields::Color,
@@ -31,7 +33,7 @@ impl kernel::graphics::light_components::Direction for DirectionalLight {
 }
 impl kernel::graphics::DirectionalLight for DirectionalLight {}
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Delegate)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Delegate, Serialize, Deserialize)]
 #[delegate(Color, target = "color")]
 #[delegate(Attenuation, target = "attenuation")]
 pub struct PointLight {
@@ -45,7 +47,7 @@ impl kernel::graphics::light_components::Intensity for PointLight {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy, PartialEq, Delegate)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Delegate, Serialize, Deserialize)]
 #[delegate(Attenuation, target = "attenuation")]
 #[delegate(Color, target = "color")]
 pub struct SpotLight {
