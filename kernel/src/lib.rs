@@ -109,4 +109,5 @@ pub mod util {
     pub use itertools;
     pub use log;
     pub use serde;
+    pub use thiserror;
 }

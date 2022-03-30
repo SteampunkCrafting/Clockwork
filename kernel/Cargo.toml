@@ -10,6 +10,7 @@ itertools = "0.10.0"
 no_deadlocks = "1.2.0"
 derive_builder = "0.10.2"
 getset = "0.1.1"
+thiserror = "1.0.30"
 
 [dependencies.ambassador]
 git = "https://github.com/SteampunkCrafting/ambassador.git"
