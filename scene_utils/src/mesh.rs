@@ -1,6 +1,6 @@
 use crate::prelude::TexturedMesh;
 use kernel::util::getset::Getters;
-use std::io::BufReader;
+use std::io::{BufReader, Read};
 
 /// A triangulated mesh, which is stored in a Vertex-Index list form.
 ///
@@ -39,8 +39,8 @@ impl<T> Mesh<T> {
 /// Textured Mesh implementation
 impl TexturedMesh {
     /// Loads mesh from the WaveFront obj source
-    pub fn from_obj_src(obj_src: impl AsRef<[u8]>) -> Result<Self, MeshCreationError> {
-        obj::load_obj::<obj::TexturedVertex, _, usize>(BufReader::new(obj_src.as_ref()))
+    pub fn from_obj_src(obj_src: impl Read) -> Result<Self, MeshCreationError> {
+        obj::load_obj::<obj::TexturedVertex, _, usize>(BufReader::new(obj_src))
             .map_err(MeshCreationError::ObjError)
             .map(
                 |obj::Obj {
