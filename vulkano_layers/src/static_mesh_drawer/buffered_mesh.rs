@@ -1,7 +1,5 @@
 use graphics::state::GraphicsState;
-use scene_utils::{
-    components::PhongMaterial, mesh::Mesh, mesh_vertex::TexturedVertex, prelude::TexturedMesh,
-};
+use scene_utils::{components::PhongMaterial, mesh_vertex::TexturedVertex, prelude::TexturedMesh};
 use std::sync::Arc;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
