@@ -1,44 +1,32 @@
-use kernel::util::sync::ReadLock;
+use kernel::util::getset::Getters;
+use std::{io::Cursor, sync::Arc};
 
 /// A representation of an immutable 2D RGBA Texture
-#[derive(Clone)]
+#[derive(Clone, Getters)]
 pub struct Texture2D {
-    data: ReadLock<Vec<u8>>,
+    #[getset(get = "pub")]
+    data: Arc<Vec<u8>>,
+
+    #[getset(get = "pub")]
     width: usize,
+
+    #[getset(get = "pub")]
     height: usize,
 }
 
 impl Texture2D {
-    pub fn new(width: usize, height: usize, data: impl Into<Vec<u8>>) -> Self {
-        Self {
-            data: ReadLock::from({
-                let data: Vec<u8> = data.into();
-                let mut data_buf = Vec::<u8>::default();
-                data_buf.reserve(width * height * 4);
-
-                for i in (0..height).rev() {
-                    let row = &data[(i * width * 4)..((i + 1) * width * 4)];
-                    for byte in row.iter() {
-                        data_buf.push(*byte);
-                    }
-                }
-
-                data_buf
-            }),
-            width,
-            height,
-        }
-    }
-
-    pub fn width(&self) -> usize {
-        self.width
-    }
-
-    pub fn height(&self) -> usize {
-        self.height
-    }
-
-    pub fn data_lock(&self) -> ReadLock<Vec<u8>> {
-        self.data.clone()
+    pub fn from_png_src(png: impl AsRef<[u8]>) -> Result<Self, png::DecodingError> {
+        png::Decoder::new(Cursor::new(png))
+            .read_info()
+            .and_then(|(png::OutputInfo { width, height, .. }, mut reader)| {
+                let mut out_img = Vec::with_capacity((width * height * 4) as usize);
+                reader.next_frame(&mut out_img)?;
+                Ok((width as usize, height as usize, Arc::new(out_img)))
+            })
+            .map(|(width, height, data)| Self {
+                width,
+                height,
+                data,
+            })
     }
 }

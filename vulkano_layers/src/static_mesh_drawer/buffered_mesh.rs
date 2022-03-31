@@ -56,12 +56,12 @@ impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
                 PhongMaterial::Textured { texture, .. } => {
                     let (texture, _) = {
                         let dimensions = ImageDimensions::Dim2d {
-                            width: texture.width() as u32,
-                            height: texture.height() as u32,
+                            width: *texture.width() as u32,
+                            height: *texture.height() as u32,
                             array_layers: 1,
                         };
                         ImmutableImage::from_iter(
-                            texture.data_lock().lock().iter().cloned(),
+                            texture.data().iter().cloned(),
                             dimensions,
                             MipmapsCount::One,
                             Format::R8G8B8A8_SRGB,
