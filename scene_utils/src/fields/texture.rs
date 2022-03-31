@@ -19,7 +19,9 @@ impl Texture2D {
         png::Decoder::new(Cursor::new(png))
             .read_info()
             .and_then(|(png::OutputInfo { width, height, .. }, mut reader)| {
-                let mut out_img = Vec::with_capacity((width * height * 4) as usize);
+                let buf_size = (width * height * 4) as usize;
+                let mut out_img = Vec::with_capacity(buf_size);
+                out_img.resize(buf_size, 0);
                 reader.next_frame(&mut out_img)?;
                 Ok((width as usize, height as usize, Arc::new(out_img)))
             })
