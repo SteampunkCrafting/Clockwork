@@ -1,12 +1,17 @@
-use getset::Getters;
+use crate::prelude::TexturedMesh;
+use kernel::util::getset::Getters;
+use std::io::BufReader;
 
 /// A triangulated mesh, which is stored in a Vertex-Index list form.
 ///
-/// The structure is generic over vertex type T.
+/// The structure is generic over vertex type T, and is immutable due to
+/// the fact that its field content are dependent on each other.
 #[derive(Getters)]
 pub struct Mesh<T> {
-    pub indices: Vec<usize>,
-    pub vertices: Vec<T>,
+    #[getset(get = "pub")]
+    indices: Vec<usize>,
+    #[getset(get = "pub")]
+    vertices: Vec<T>,
 }
 
 pub struct TriangleIterator<'a, T> {
@@ -14,12 +19,37 @@ pub struct TriangleIterator<'a, T> {
     mesh: &'a Mesh<T>,
 }
 
+#[derive(kernel::util::thiserror::Error, Debug)]
+pub enum MeshCreationError {
+    #[error("Failed parsing .obj source {0:?}")]
+    ObjError(obj::ObjError),
+}
+
+/// Generic Mesh implementation
 impl<T> Mesh<T> {
+    /// Gets an iterator over triangles of that vertex.
     pub fn triangle_iter(&self) -> TriangleIterator<'_, T> {
         TriangleIterator {
             counter: 0,
             mesh: self,
         }
+    }
+}
+
+/// Textured Mesh implementation
+impl TexturedMesh {
+    /// Loads mesh from the WaveFront obj source
+    pub fn from_obj_src(obj_src: impl AsRef<[u8]>) -> Result<Self, MeshCreationError> {
+        obj::load_obj::<obj::TexturedVertex, _, usize>(BufReader::new(obj_src.as_ref()))
+            .map_err(MeshCreationError::ObjError)
+            .map(
+                |obj::Obj {
+                     vertices, indices, ..
+                 }| Self {
+                    indices,
+                    vertices: vertices.into_iter().map(Into::into).collect(),
+                },
+            )
     }
 }
 

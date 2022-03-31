@@ -30,7 +30,7 @@ pub(super) struct InstanceData {
 
 impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
     fn from(
-        (GraphicsState { device, queue, .. }, Mesh { indices, vertices }, material): (
+        (GraphicsState { device, queue, .. }, mesh, material): (
             &GraphicsState,
             &TexturedMesh,
             &PhongMaterial,
@@ -41,14 +41,14 @@ impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
                 device.clone(),
                 BufferUsage::all(),
                 false,
-                vertices.iter().cloned().map(From::from),
+                mesh.vertices().iter().cloned().map(From::from),
             )
             .unwrap(),
             indices: CpuAccessibleBuffer::from_iter(
                 device.clone(),
                 BufferUsage::all(),
                 false,
-                indices.iter().cloned().map(|i| i as u32),
+                mesh.indices().iter().cloned().map(|i| i as u32),
             )
             .unwrap(),
             texture: match material {
@@ -72,7 +72,7 @@ impl From<(&GraphicsState, &TexturedMesh, &PhongMaterial)> for BufferedMesh {
                     Some(texture)
                 }
             },
-            mesh_index_count: indices.len() as u32,
+            mesh_index_count: mesh.indices().len() as u32,
         }
     }
 }

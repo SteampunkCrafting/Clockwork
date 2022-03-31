@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-getset = "0.1.1"
 serde = "1.*"
+obj-rs = "0.7.0"
 
 [dependencies.kernel]
 package = "spc_clockwork_kernel"
