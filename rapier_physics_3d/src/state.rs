@@ -4,10 +4,10 @@ use kernel::{
     util::derive_builder::Builder,
 };
 use rapier3d::{
-    dynamics::{CCDSolver, JointSet, RigidBodySet},
+    dynamics::{CCDSolver, RigidBodySet},
     geometry::{BroadPhase, ColliderSet, NarrowPhase},
     math::Vector,
-    prelude::IslandManager,
+    prelude::{ImpulseJointSet, IslandManager, MultibodyJointSet},
 };
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -33,9 +33,13 @@ pub struct PhysicsState {
     #[builder(default = "ColliderSet::new()")]
     pub colliders: ColliderSet,
 
-    /// A set of joint constraints for rigid bodies.
-    #[builder(default = "JointSet::new()")]
-    pub joints: JointSet,
+    /// A set of impulse joint constraints for rigid bodies.
+    #[builder(default = "ImpulseJointSet::new()")]
+    pub impulse_joints: ImpulseJointSet,
+
+    /// A set of multibody joint constraints for rigid bodies.
+    #[builder(default = "MultibodyJointSet::new()")]
+    pub multibody_joints: MultibodyJointSet,
 
     /// Resource manager (puts bodies to sleep)
     #[builder(private, default = "IslandManager::new()")]

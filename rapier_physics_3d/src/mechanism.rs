@@ -56,12 +56,13 @@ where
                  PhysicsState {
                      gravity,
                      bodies,
-                     joints,
+                     impulse_joints,
                      colliders,
                      broad_phase,
                      narrow_phase,
                      ccd_solver,
                      islands,
+                     multibody_joints,
                  }| {
                     integration_parameters.dt = delta_time.as_secs_f32();
                     physics_pipeline.step(
@@ -72,7 +73,8 @@ where
                         narrow_phase,
                         bodies,
                         colliders,
-                        joints,
+                        impulse_joints,
+                        multibody_joints,
                         ccd_solver,
                         &mut (),
                         &mut (),
